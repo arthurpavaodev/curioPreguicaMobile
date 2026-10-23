@@ -1,6 +1,7 @@
 import {
   Aluno,
   AvaliadorDeCurriculo,
+  Candidatura,
   Curriculo,
   ExtratorDeRequisitos,
   OrigemVaga,
@@ -36,13 +37,19 @@ export class CurriculumRepository {
     await localStorageService.setJSON(STORAGE_KEYS.CURRICULO, curriculo);
   }
 
-  async salvarTexto(texto: string): Promise<Curriculo> {
+  async salvarTexto(
+    texto: string,
+    nomeArquivo?: string,
+    formatoOrigem?: 'pdf' | 'manual' | 'exemplo',
+  ): Promise<Curriculo> {
     const avaliacao = AvaliadorDeCurriculo.avaliar(texto);
     const curriculo: Curriculo = {
       texto,
       palavras: avaliacao.totalPalavras,
       secoesDetectadas: avaliacao.secoesDetectadas,
       atualizadoEm: new Date().toISOString(),
+      nomeArquivo,
+      formatoOrigem: formatoOrigem || (nomeArquivo?.endsWith('.pdf') ? 'pdf' : 'manual'),
     };
     await this.salvar(curriculo);
     return curriculo;
@@ -106,6 +113,7 @@ export class JobRepository {
     empresa?: string;
     texto: string;
     origem: OrigemVaga;
+    palavrasChave?: string[] | string;
   }): Promise<Vaga> {
     const titulo = input.titulo?.trim() || '';
     const texto = input.texto?.trim() || '';
@@ -115,6 +123,22 @@ export class JobRepository {
     }
 
     const requisitos = ExtratorDeRequisitos.extrair(texto);
+
+    let palavrasChave: string[] = [];
+    if (Array.isArray(input.palavrasChave)) {
+      palavrasChave = input.palavrasChave.map((k) => k.trim()).filter((k) => k.length > 0);
+    } else if (typeof input.palavrasChave === 'string') {
+      palavrasChave = input.palavrasChave
+        .split(/[,;\n]/)
+        .map((k) => k.trim())
+        .filter((k) => k.length > 0);
+    }
+
+    // Se nenhuma palavra-chave foi fornecida explicitamente, extrair dos requisitos
+    if (palavrasChave.length === 0 && requisitos.length > 0) {
+      palavrasChave = requisitos.map((r) => r.rotulo);
+    }
+
     const vaga: Vaga = {
       id: gerarNovoId('vaga'),
       titulo,
@@ -122,6 +146,7 @@ export class JobRepository {
       descricao: texto,
       origem: input.origem,
       requisitos,
+      palavrasChave,
     };
 
     await this.adicionar(vaga);
@@ -198,3 +223,53 @@ export const jobRepository = new JobRepository();
 export const flightPlanRepository = new FlightPlanRepository();
 export const preferencesRepository = new PreferencesRepository();
 export const studentRepository = new StudentRepository();
+
+/**
+ * Repositório de Candidaturas persistidas no dispositivo.
+ */
+export class ApplicationRepository {
+  async listar(): Promise<Candidatura[]> {
+    const salvas = await localStorageService.getJSON<Candidatura[]>(STORAGE_KEYS.CANDIDATURAS);
+    return salvas ?? [];
+  }
+
+  async obterPorVaga(vagaId: string): Promise<Candidatura[]> {
+    const todas = await this.listar();
+    return todas.filter((c) => c.vagaId === vagaId);
+  }
+
+  async candidatar(input: {
+    vagaId: string;
+    alunoId: string;
+    alunoNome: string;
+    compatibilidade: number | null;
+  }): Promise<Candidatura> {
+    const todas = await this.listar();
+    const existente = todas.find(
+      (c) => c.vagaId === input.vagaId && c.alunoId === input.alunoId,
+    );
+    if (existente) {
+      return existente;
+    }
+
+    const nova: Candidatura = {
+      id: gerarNovoId('cand'),
+      vagaId: input.vagaId,
+      alunoId: input.alunoId,
+      alunoNome: input.alunoNome,
+      criadaEm: new Date().toISOString(),
+      compatibilidade: input.compatibilidade,
+    };
+
+    todas.unshift(nova);
+    await localStorageService.setJSON(STORAGE_KEYS.CANDIDATURAS, todas);
+    return nova;
+  }
+
+  async jaCandidatou(vagaId: string, alunoId: string): Promise<boolean> {
+    const todas = await this.listar();
+    return todas.some((c) => c.vagaId === vagaId && c.alunoId === alunoId);
+  }
+}
+
+export const applicationRepository = new ApplicationRepository();

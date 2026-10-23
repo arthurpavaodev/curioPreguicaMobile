@@ -20,17 +20,31 @@ import { JobSelector } from '../../jobs/components/JobSelector';
 
 export function TeiaDashboardScreen() {
   const { cores } = useTheme();
-  const { vagasVisiveis, vagaSelecionada, alunos, selecionarVaga } = useAppData();
+  const { vagasVisiveis, vagaSelecionada, alunos, curriculo, candidaturas, selecionarVaga } =
+    useAppData();
+
+  const todosAlunos = useMemo(() => {
+    const lista = [...alunos];
+    if (curriculo && curriculo.texto.trim().length > 0) {
+      lista.unshift({
+        id: 'aluno_atual',
+        nome: curriculo.nomeArquivo ? `Você (PDF: ${curriculo.nomeArquivo})` : 'Você (Aluno UNDB)',
+        modulo: 6,
+        curriculoTexto: curriculo.texto,
+      });
+    }
+    return lista;
+  }, [alunos, curriculo]);
 
   const resumo = useMemo(() => {
     if (!vagaSelecionada) return null;
-    return RankeadorDeAlunos.resumirPainel(alunos, vagaSelecionada);
-  }, [alunos, vagaSelecionada]);
+    return RankeadorDeAlunos.resumirPainel(todosAlunos, vagaSelecionada);
+  }, [todosAlunos, vagaSelecionada]);
 
   const ranking = useMemo(() => {
     if (!vagaSelecionada) return [];
-    return RankeadorDeAlunos.rankear(alunos, vagaSelecionada, 60);
-  }, [alunos, vagaSelecionada]);
+    return RankeadorDeAlunos.rankear(todosAlunos, vagaSelecionada, 60);
+  }, [todosAlunos, vagaSelecionada]);
 
   if (!vagaSelecionada) {
     return (
@@ -124,6 +138,10 @@ export function TeiaDashboardScreen() {
               ? 'destaque'
               : 'atencao';
 
+          const jaCandidatou = candidaturas.some(
+            (c) => c.vagaId === vagaSelecionada.id && (c.alunoId === aluno.id || aluno.id === 'aluno_atual'),
+          );
+
           return (
             <View
               key={aluno.id}
@@ -134,16 +152,21 @@ export function TeiaDashboardScreen() {
             >
               <View style={styles.studentTop}>
                 <View style={{ flex: 1, marginRight: spacing.sm }}>
-                  <Text style={[tipografia.textoDestaque, { color: cores.tinta }]}>
-                    #{index + 1} {aluno.nome}
-                  </Text>
-                  <Text style={[tipografia.apoio, { color: cores.textoSecundario }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                    <Text style={[tipografia.textoDestaque, { color: cores.tinta }]}>
+                      #{index + 1} {aluno.nome}
+                    </Text>
+                    {jaCandidatou && (
+                      <Badge rotulo="Inscrito ✓" variante="ok" />
+                    )}
+                  </View>
+                  <Text style={[tipografia.apoio, { color: cores.textoSecundario, marginTop: 2 }]}>
                     {aluno.modulo}º módulo · Engenharia de Software
                   </Text>
                 </View>
 
                 <Badge
-                  rotulo={temCurriculo ? `${aderencia}%` : 'sem currículo'}
+                  rotulo={temCurriculo ? `${aderencia}% compatível` : 'sem currículo'}
                   variante={badgeVariante}
                 />
               </View>

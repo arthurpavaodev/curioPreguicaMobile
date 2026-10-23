@@ -82,6 +82,18 @@ export const VAGAS_EXEMPLO: Vaga[] = [
     descricao: TEXTO_VAGA_EX1,
     origem: 'exemplo',
     requisitos: ExtratorDeRequisitos.extrair(TEXTO_VAGA_EX1),
+    palavrasChave: [
+      'React Native',
+      'Flutter',
+      'TypeScript',
+      'API REST',
+      'Git',
+      'GitHub',
+      'Firebase',
+      'Jest',
+      'Scrum',
+      'Inglês',
+    ],
   },
   {
     id: 'ex2',
@@ -90,6 +102,17 @@ export const VAGAS_EXEMPLO: Vaga[] = [
     descricao: TEXTO_VAGA_EX2,
     origem: 'exemplo',
     requisitos: ExtratorDeRequisitos.extrair(TEXTO_VAGA_EX2),
+    palavrasChave: [
+      'Node.js',
+      'Python',
+      'SQL',
+      'PostgreSQL',
+      'API REST',
+      'Git',
+      'Docker',
+      'AWS',
+      'Testes automatizados',
+    ],
   },
   {
     id: 'ex3',
@@ -98,6 +121,16 @@ export const VAGAS_EXEMPLO: Vaga[] = [
     descricao: TEXTO_VAGA_EX3,
     origem: 'exemplo',
     requisitos: ExtratorDeRequisitos.extrair(TEXTO_VAGA_EX3),
+    palavrasChave: [
+      'Testes de software',
+      'Casos de teste',
+      'Jira',
+      'Metodologias ágeis',
+      'Inglês',
+      'Cypress',
+      'Selenium',
+      'SQL',
+    ],
   },
 ];
 

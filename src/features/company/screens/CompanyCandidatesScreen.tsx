@@ -25,17 +25,32 @@ export function CompanyCandidatesScreen() {
     vagasVisiveis,
     vagaSelecionada,
     alunos,
+    curriculo,
+    candidaturas,
     diagnosticoAtual,
     selecionarVaga,
   } = useAppData();
 
   const [aderenciaMinima, setAderenciaMinima] = useState<number>(60);
 
+  const todosAlunos = useMemo(() => {
+    const lista = [...alunos];
+    if (curriculo && curriculo.texto.trim().length > 0) {
+      lista.unshift({
+        id: 'aluno_atual',
+        nome: curriculo.nomeArquivo ? `Você (PDF: ${curriculo.nomeArquivo})` : 'Você (Aluno UNDB)',
+        modulo: 6,
+        curriculoTexto: curriculo.texto,
+      });
+    }
+    return lista;
+  }, [alunos, curriculo]);
+
   const candidatosQualificados = useMemo(() => {
     if (!vagaSelecionada) return [];
-    const ranking = RankeadorDeAlunos.rankear(alunos, vagaSelecionada, aderenciaMinima);
+    const ranking = RankeadorDeAlunos.rankear(todosAlunos, vagaSelecionada, aderenciaMinima);
     return ranking.filter((r) => r.aderencia !== null && r.aderencia >= aderenciaMinima);
-  }, [alunos, vagaSelecionada, aderenciaMinima]);
+  }, [todosAlunos, vagaSelecionada, aderenciaMinima]);
 
   if (!vagaSelecionada) {
     return (
@@ -121,9 +136,12 @@ export function CompanyCandidatesScreen() {
       ) : (
         <Card semPadding>
           {candidatosQualificados.map((item, index) => {
-            const { aluno, aderencia, faltam } = item;
+            const { aluno, aderencia, faltam, palavrasAtendidas, palavrasFaltantes } = item;
             const valor = aderencia ?? 0;
             const isLast = index === candidatosQualificados.length - 1;
+            const jaCandidatou = candidaturas.some(
+              (c) => c.vagaId === vagaSelecionada.id && (c.alunoId === aluno.id || (aluno.id === 'aluno_atual')),
+            );
 
             return (
               <View
@@ -134,17 +152,22 @@ export function CompanyCandidatesScreen() {
                 ]}
               >
                 <View style={styles.candidateTop}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[tipografia.textoDestaque, { color: cores.tinta }]}>
-                      #{index + 1} {aluno.nome}
-                    </Text>
-                    <Text style={[tipografia.apoio, { color: cores.textoSecundario }]}>
+                  <View style={{ flex: 1, marginRight: spacing.sm }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                      <Text style={[tipografia.textoDestaque, { color: cores.tinta }]}>
+                        #{index + 1} {aluno.nome}
+                      </Text>
+                      {jaCandidatou && (
+                        <Badge rotulo="Inscrição Confirmada ✓" variante="ok" />
+                      )}
+                    </View>
+                    <Text style={[tipografia.apoio, { color: cores.textoSecundario, marginTop: 2 }]}>
                       {aluno.modulo}º módulo · Engenharia de Software
                     </Text>
                   </View>
 
                   <Badge
-                    rotulo={`${valor}%`}
+                    rotulo={`${valor}% compatível`}
                     variante={valor >= 75 ? 'ok' : 'destaque'}
                   />
                 </View>
@@ -156,16 +179,25 @@ export function CompanyCandidatesScreen() {
                   style={{ marginVertical: 6 }}
                 />
 
+                {/* Badges de palavras-chave do PDF encontradas / faltantes */}
+                {palavrasAtendidas && palavrasAtendidas.length > 0 && (
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
+                    {palavrasAtendidas.slice(0, 5).map((kw, i) => (
+                      <Badge key={`at_${i}`} rotulo={`✓ ${kw}`} variante="ok" />
+                    ))}
+                  </View>
+                )}
+
                 {faltam.length > 0 ? (
-                  <Text style={[tipografia.apoio, { color: cores.textoSecundario }]}>
+                  <Text style={[tipografia.apoio, { color: cores.textoSecundario, marginTop: 6 }]}>
                     <Text style={{ fontWeight: '600', color: cores.tinta }}>
-                      Pontos a desenvolver:{' '}
+                      Palavras faltantes no currículo:{' '}
                     </Text>
                     {faltam.join(', ')}
                   </Text>
                 ) : (
-                  <Text style={[tipografia.apoio, { color: cores.ok }]}>
-                    ✓ Atende a 100% dos requisitos exigidos pela vaga.
+                  <Text style={[tipografia.apoio, { color: cores.ok, marginTop: 6 }]}>
+                    ✓ Atende a todas as palavras-chave exigidas pela vaga.
                   </Text>
                 )}
               </View>

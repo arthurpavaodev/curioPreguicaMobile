@@ -27,13 +27,17 @@ export class RankeadorDeAlunos {
       const diagnostico = CalculadoraDeAderencia.calcular(aluno.curriculoTexto, vaga);
       const aderencia = diagnostico.aderencia;
       const compativel = aderencia !== null && aderencia >= aderenciaMinima;
-      const faltam = diagnostico.requisitosFaltantes.slice(0, 3).map((f) => f.requisito.rotulo);
+      const faltamRequisitos = diagnostico.requisitosFaltantes.slice(0, 3).map((f) => f.requisito.rotulo);
+      const faltamPalavras = (diagnostico.palavrasFaltantes || []).slice(0, 3);
+      const faltam = faltamRequisitos.length > 0 ? faltamRequisitos : faltamPalavras;
 
       return {
         aluno,
         aderencia,
         compativel,
         faltam,
+        palavrasAtendidas: diagnostico.palavrasAtendidas,
+        palavrasFaltantes: diagnostico.palavrasFaltantes,
       };
     });
 

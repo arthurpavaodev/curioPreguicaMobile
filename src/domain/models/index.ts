@@ -28,6 +28,7 @@ export interface Vaga {
   descricao: string;
   origem: OrigemVaga;
   requisitos: Requisito[];
+  palavrasChave?: string[];
 }
 
 export interface SecoesDetectadas {
@@ -43,6 +44,8 @@ export interface Curriculo {
   palavras: number;
   secoesDetectadas: SecoesDetectadas;
   atualizadoEm: string;
+  nomeArquivo?: string;
+  formatoOrigem?: 'pdf' | 'manual' | 'exemplo';
 }
 
 export interface AvaliacaoCurriculo {
@@ -85,6 +88,9 @@ export interface Diagnostico {
   requisitosAtendidosCount: number;
   requisitosAtendidos: RequisitoAtendido[];
   requisitosFaltantes: RequisitoFaltante[];
+  palavrasChave?: string[];
+  palavrasAtendidas?: string[];
+  palavrasFaltantes?: string[];
   pontosFortes: string[];
   pontosFracos: string[];
   ortografia: ItemOrtografico[];
@@ -122,6 +128,18 @@ export interface AlunoRankeado {
   aderencia: number | null;
   compativel: boolean;
   faltam: string[];
+  palavrasAtendidas?: string[];
+  palavrasFaltantes?: string[];
+  aplicou?: boolean;
+}
+
+export interface Candidatura {
+  id: string;
+  vagaId: string;
+  alunoId: string;
+  alunoNome: string;
+  criadaEm: string;
+  compatibilidade: number | null;
 }
 
 export type PerfilUsuario = 'aluno' | 'teia' | 'empresa';

@@ -35,6 +35,8 @@ export function StudentJobsScreen({ onNavegarParaDiagnostico }: StudentJobsScree
     selecionarVaga,
     adicionarVaga,
     removerVaga,
+    candidatarVaga,
+    jaCandidatouNaVaga,
   } = useAppData();
 
   const [busca, setBusca] = useState('');
@@ -44,6 +46,7 @@ export function StudentJobsScreen({ onNavegarParaDiagnostico }: StudentJobsScree
   const [novoTitulo, setNovoTitulo] = useState('');
   const [novaEmpresa, setNovaEmpresa] = useState('');
   const [novaDescricao, setNovaDescricao] = useState('');
+  const [novasPalavrasChave, setNovasPalavrasChave] = useState('');
   const [erroForm, setErroForm] = useState<string | null>(null);
   const [adicionando, setAdicionando] = useState(false);
 
@@ -79,10 +82,12 @@ export function StudentJobsScreen({ onNavegarParaDiagnostico }: StudentJobsScree
         empresa: novaEmpresa.trim() || undefined,
         texto: novaDescricao.trim(),
         origem: 'aluno',
+        palavrasChave: novasPalavrasChave,
       });
       setNovoTitulo('');
       setNovaEmpresa('');
       setNovaDescricao('');
+      setNovasPalavrasChave('');
       setFormAberto(false);
       onNavegarParaDiagnostico(criada.id);
     } catch (e) {
@@ -118,24 +123,35 @@ export function StudentJobsScreen({ onNavegarParaDiagnostico }: StudentJobsScree
               </Text>
             </View>
 
-            {/* Barra de Busca com Círculo Preto de Lupa Estilo "Triagem" do CREA-MA */}
+            {/* Barra de Busca Integrada (sem botões quebrados em Dark Mode) */}
             <View style={styles.searchRow}>
               <View
                 style={[
                   styles.searchInputWrap,
-                  { backgroundColor: cores.superficie, borderColor: cores.linha },
+                  {
+                    backgroundColor: cores.superficieSecundaria,
+                    borderColor: cores.linha,
+                  },
                 ]}
               >
+                <Text style={{ fontSize: 14, marginRight: 8 }}>🔍</Text>
                 <TextInput
                   placeholder="Buscar por vaga, empresa ou tecnologia..."
                   placeholderTextColor={cores.textoSecundario}
                   value={busca}
                   onChangeText={setBusca}
                   style={[styles.searchInput, { color: cores.tinta }]}
+                  returnKeyType="search"
                 />
-              </View>
-              <View style={[styles.blackSearchCircle, { backgroundColor: cores.tinta }]}>
-                <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '700' }}>⌕</Text>
+                {busca.length > 0 && (
+                  <Pressable
+                    onPress={() => setBusca('')}
+                    hitSlop={8}
+                    style={styles.clearBtn}
+                  >
+                    <Text style={{ color: cores.textoSecundario, fontSize: 13, fontWeight: '700' }}>✕</Text>
+                  </Pressable>
+                )}
               </View>
             </View>
 
@@ -218,6 +234,13 @@ export function StudentJobsScreen({ onNavegarParaDiagnostico }: StudentJobsScree
                   />
 
                   <Input
+                    rotulo="PALAVRAS-CHAVE DA VAGA (OPCIONAL, SEPARADAS POR VÍRGULA)"
+                    placeholder="Ex: React Native, TypeScript, Git, SQL"
+                    value={novasPalavrasChave}
+                    onChangeText={setNovasPalavrasChave}
+                  />
+
+                  <Input
                     rotulo="DESCRIÇÃO E REQUISITOS DA VAGA"
                     placeholder="Cole os requisitos obrigatórios e diferenciais..."
                     multiline
@@ -255,89 +278,112 @@ export function StudentJobsScreen({ onNavegarParaDiagnostico }: StudentJobsScree
           return (
             <View
               style={[
-                styles.bentoJobOuter,
+                styles.jobCardSingle,
                 { backgroundColor: cores.superficie, borderColor: cores.linha },
               ]}
             >
-              {/* Card Interno Estilo "Vaga / Oferta" do Roadmap CREA-MA */}
+              <View style={styles.innerTopRow}>
+                <Text style={[styles.vagaTagLabel, { color: cores.textoSecundario }]}>
+                  {vaga.origem === 'exemplo'
+                    ? 'Vaga de Exemplo'
+                    : vaga.origem === 'aluno'
+                    ? 'Sua Vaga Simulada'
+                    : 'Vaga de Empresa'}
+                </Text>
+                <Badge
+                  rotulo={aderencia !== null ? `${aderencia}% compatível` : 'Sem req.'}
+                  variante={
+                    aderencia === null
+                      ? 'padrao'
+                      : aderencia >= 75
+                      ? 'ok'
+                      : aderencia >= 45
+                      ? 'destaque'
+                      : 'atencao'
+                  }
+                />
+              </View>
+
+              <Text style={[styles.jobBigTitle, { color: cores.tinta }]}>
+                {vaga.titulo}
+              </Text>
+
               <View
                 style={[
-                  styles.bentoJobInner,
-                  { backgroundColor: cores.superficie, borderColor: cores.linha },
+                  styles.companyPillRow,
+                  { backgroundColor: cores.superficieSecundaria, borderColor: cores.linha },
                 ]}
               >
-                <View style={styles.innerTopRow}>
-                  <Text style={[styles.vagaTagLabel, { color: cores.textoSecundario }]}>
-                    {vaga.origem === 'exemplo'
-                      ? 'Vaga de Exemplo'
-                      : vaga.origem === 'aluno'
-                      ? 'Sua Vaga Simulada'
-                      : 'Vaga de Empresa'}
-                  </Text>
-                  <Badge
-                    rotulo={aderencia !== null ? `${aderencia}% compatível` : 'Sem req.'}
-                    variante={
-                      aderencia === null
-                        ? 'padrao'
-                        : aderencia >= 75
-                        ? 'ok'
-                        : aderencia >= 45
-                        ? 'destaque'
-                        : 'atencao'
-                    }
-                  />
-                </View>
-
-                <Text style={[styles.jobBigTitle, { color: cores.tinta }]}>
-                  {vaga.titulo}
+                <Text style={{ fontSize: 13, marginRight: 6 }}>🏢</Text>
+                <Text style={[styles.companyNameText, { color: cores.tinta }]} numberOfLines={1}>
+                  {vaga.empresa}
                 </Text>
+                <Text style={[styles.reqCountText, { color: cores.textoSecundario }]}>
+                  {diagnostico.requisitosAtendidosCount}/{diagnostico.totalRequisitos} req.
+                </Text>
+              </View>
 
-                <View
-                  style={[
-                    styles.companyPillRow,
-                    { backgroundColor: cores.superficieSecundaria, borderColor: cores.linha },
-                  ]}
-                >
-                  <Text style={{ fontSize: 13, marginRight: 6 }}>🏢</Text>
-                  <Text style={[styles.companyNameText, { color: cores.tinta }]} numberOfLines={1}>
-                    {vaga.empresa}
-                  </Text>
-                  <Text style={[styles.reqCountText, { color: cores.textoSecundario }]}>
-                    {diagnostico.requisitosAtendidosCount}/{diagnostico.totalRequisitos} req.
-                  </Text>
+              <ProgressBar
+                progresso={aderencia ?? 0}
+                cor={cores.destaque}
+                altura={6}
+                style={{ marginTop: 12, marginBottom: 8 }}
+              />
+
+              {diagnostico.palavrasChave && diagnostico.palavrasChave.length > 0 && (
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginBottom: 10 }}>
+                  {diagnostico.palavrasAtendidas?.slice(0, 4).map((kw, i) => (
+                    <Badge key={`at_${i}`} rotulo={`✓ ${kw}`} variante="ok" />
+                  ))}
+                  {diagnostico.palavrasFaltantes?.slice(0, 3).map((kw, i) => (
+                    <Badge key={`ft_${i}`} rotulo={kw} variante="padrao" />
+                  ))}
                 </View>
+              )}
 
-                <ProgressBar
-                  progresso={aderencia ?? 0}
-                  cor={cores.destaque}
-                  altura={6}
-                  style={{ marginTop: 10 }}
-                />
-
-                <View style={styles.innerActionsRow}>
+              <View style={styles.innerActionsRow}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
                   {vaga.origem !== 'exemplo' ? (
                     <Pressable
                       onPress={() => confirmarRemocao(vaga.id, vaga.titulo)}
                       style={styles.removeBtn}
+                      hitSlop={8}
                     >
                       <Text style={[tipografia.textoDestaque, { color: cores.erro, fontSize: 12.5 }]}>
                         Remover
                       </Text>
                     </Pressable>
-                  ) : (
-                    <View />
-                  )}
+                  ) : null}
 
-                  <Button
-                    titulo="Analisar vaga  ↗"
-                    onPress={async () => {
-                      await selecionarVaga(vaga.id);
-                      onNavegarParaDiagnostico(vaga.id);
-                    }}
-                    variante="primario"
-                    compacto
-                  />
+                  {jaCandidatouNaVaga(vaga.id) ? (
+                    <Badge rotulo="Inscrito ✓" variante="ok" />
+                  ) : (
+                    <Button
+                      titulo="Candidatar-se"
+                      onPress={async () => {
+                        const ok = await candidatarVaga(vaga.id);
+                        if (ok) {
+                          Alert.alert(
+                            'Candidatura registrada!',
+                            `Sua candidatura para "${vaga.titulo}" foi enviada com sucesso para a empresa e TEIA.`,
+                          );
+                        }
+                      }}
+                      variante="padrao"
+                      compacto
+                    />
+                  )}
                 </View>
+
+                <Button
+                  titulo="Diagnosticar  ↗"
+                  onPress={async () => {
+                    await selecionarVaga(vaga.id);
+                    onNavegarParaDiagnostico(vaga.id);
+                  }}
+                  variante="primario"
+                  compacto
+                />
               </View>
             </View>
           );
@@ -381,27 +427,26 @@ const styles = StyleSheet.create({
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
     marginBottom: spacing.md,
   },
   searchInputWrap: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1,
     borderRadius: 12,
     paddingHorizontal: spacing.md,
-    minHeight: 42,
-    justifyContent: 'center',
+    minHeight: 44,
   },
   searchInput: {
+    flex: 1,
     fontFamily: fontNames.plexSans400,
     fontSize: 13.5,
+    paddingVertical: 8,
   },
-  blackSearchCircle: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    alignItems: 'center',
-    justifyContent: 'center',
+  clearBtn: {
+    padding: 6,
+    marginLeft: 4,
   },
   pillFilterRow: {
     flexDirection: 'row',
@@ -433,21 +478,16 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     borderTopWidth: 1,
   },
-  bentoJobOuter: {
-    borderRadius: 18,
+  jobCardSingle: {
+    borderRadius: 16,
     borderWidth: 1,
     padding: spacing.md,
-    marginBottom: spacing.md,
-  },
-  bentoJobInner: {
-    borderRadius: 14,
-    borderWidth: 1,
-    padding: spacing.md,
-    shadowColor: '#0A0D14',
-    shadowOffset: { width: 0, height: 3 },
+    marginBottom: 12,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 1,
+    shadowRadius: 6,
+    elevation: 2,
   },
   innerTopRow: {
     flexDirection: 'row',

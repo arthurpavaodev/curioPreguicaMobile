@@ -87,11 +87,11 @@ export function RootNavigator() {
             >
               <Text style={[styles.emblemIcon, { color: '#D91A5B', fontSize: 13 }]}>✈</Text>
             </View>
-            <View>
-              <Text style={[styles.brandLine1, { color: cores.textoSecundario }]}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.brandLine1, { color: cores.textoSecundario }]} numberOfLines={1}>
                 Banco de oportunidades do
               </Text>
-              <Text style={[styles.brandLine2, { color: cores.tinta }]}>
+              <Text style={[styles.brandLine2, { color: cores.tinta }]} numberOfLines={1}>
                 PLANO DE VOO · <Text style={{ color: cores.destaque }}>TEIA-UNDB</Text>
               </Text>
             </View>
@@ -159,9 +159,11 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   emblemGroup: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    marginRight: spacing.sm,
   },
   emblemCircle: {
     width: 34,

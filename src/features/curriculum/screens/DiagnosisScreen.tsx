@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -40,6 +41,8 @@ export function DiagnosisScreen({
     textoCurriculo,
     carregando,
     selecionarVaga,
+    candidatarVaga,
+    jaCandidatouNaVaga,
   } = useAppData();
 
   const [abaAtiva, setAbaAtiva] = useState<AbaDiagnostico>('pendentes');
@@ -159,7 +162,71 @@ export function DiagnosisScreen({
             compacto
           />
         </View>
+
+        {/* Linha de Ação: Candidatar-se à Vaga */}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderTopWidth: 1,
+            borderTopColor: cores.linha,
+            paddingTop: spacing.sm,
+            marginTop: spacing.sm,
+          }}
+        >
+          <View style={{ flex: 1, marginRight: spacing.sm }}>
+            <Text style={[tipografia.textoDestaque, { color: cores.tinta }]}>
+              Interessado na oportunidade?
+            </Text>
+            <Text style={[tipografia.apoio, { color: cores.textoSecundario }]}>
+              Envie sua candidatura para o painel da empresa e TEIA.
+            </Text>
+          </View>
+
+          {jaCandidatouNaVaga(vagaSelecionada.id) ? (
+            <Badge rotulo="Inscrição Confirmada ✓" variante="ok" />
+          ) : (
+            <Button
+              titulo="Candidatar-se  ↗"
+              onPress={async () => {
+                const ok = await candidatarVaga(vagaSelecionada.id);
+                if (ok) {
+                  Alert.alert(
+                    'Candidatura Confirmada!',
+                    `Você se candidatou para "${vagaSelecionada.titulo}". Seu perfil e compatibilidade já estão visíveis para os recrutadores.`,
+                  );
+                }
+              }}
+              variante="padrao"
+              compacto
+            />
+          )}
+        </View>
       </Card>
+
+      {/* Card de Palavras-Chave do PDF */}
+      {diagnosticoAtual.palavrasChave && diagnosticoAtual.palavrasChave.length > 0 && (
+        <Card>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <Text style={[tipografia.rotulo, { color: cores.destaque }]}>
+              PALAVRAS-CHAVE DA VAGA ({diagnosticoAtual.palavrasAtendidas?.length || 0} de {diagnosticoAtual.palavrasChave.length} no seu PDF)
+            </Text>
+          </View>
+          <Text style={[tipografia.apoio, { color: cores.textoSecundario, marginBottom: 10 }]}>
+            Comparação direta entre o texto extraído do seu currículo em PDF e os termos definidos pela empresa.
+          </Text>
+
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+            {diagnosticoAtual.palavrasAtendidas?.map((kw, i) => (
+              <Badge key={`kw_at_${i}`} rotulo={`✓ ${kw}`} variante="ok" />
+            ))}
+            {diagnosticoAtual.palavrasFaltantes?.map((kw, i) => (
+              <Badge key={`kw_ft_${i}`} rotulo={`Falta: ${kw}`} variante="atencao" />
+            ))}
+          </View>
+        </Card>
+      )}
 
       {aderencia === null ? (
         <NoticeBanner

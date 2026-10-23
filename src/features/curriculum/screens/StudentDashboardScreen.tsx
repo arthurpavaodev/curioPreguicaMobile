@@ -102,7 +102,7 @@ export function StudentDashboardScreen({
           <View
             style={[
               styles.bentoInnerPreview,
-              { backgroundColor: cores.superficie, borderColor: cores.linha },
+              { backgroundColor: cores.superficieSecundaria, borderColor: cores.linha },
             ]}
           >
             <Text style={[styles.previewTitle, { color: cores.tinta }]}>Meu Currículo</Text>
@@ -177,7 +177,7 @@ export function StudentDashboardScreen({
           <View
             style={[
               styles.bentoInnerPreview,
-              { backgroundColor: cores.superficie, borderColor: cores.linha },
+              { backgroundColor: cores.superficieSecundaria, borderColor: cores.linha },
             ]}
           >
             <Text style={[styles.previewTitle, { color: cores.tinta }]}>Compatibilidade</Text>
@@ -229,7 +229,7 @@ export function StudentDashboardScreen({
           <View
             style={[
               styles.bentoInnerPreview,
-              { backgroundColor: cores.superficie, borderColor: cores.linha },
+              { backgroundColor: cores.superficieSecundaria, borderColor: cores.linha },
             ]}
           >
             <View style={styles.planMiniHeader}>

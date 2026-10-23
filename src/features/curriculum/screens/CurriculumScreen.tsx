@@ -23,6 +23,7 @@ import { useCurriculum } from '../hooks/useCurriculum';
 export function CurriculumScreen() {
   const { cores } = useTheme();
   const {
+    curriculo,
     texto,
     isExemplo,
     analise,
@@ -32,7 +33,7 @@ export function CurriculumScreen() {
     atualizarTexto,
     usarExemplo,
     limpar,
-    importarTxt,
+    importarPdf,
   } = useCurriculum();
 
   const { secoesDetectadas, totalPalavras, competenciasReconhecidas, pontosFracos, ortografia } =
@@ -59,23 +60,28 @@ export function CurriculumScreen() {
         <View style={styles.centeredHeader}>
           <Text style={[styles.overlineTag, { color: cores.destaque }]}>PERFIL DO CANDIDATO</Text>
           <Text style={[styles.mainTitle, { color: cores.tinta }]}>
-            Estruture seu{' '}
-            <Text style={{ color: cores.laranjaDestaque }}>currículo</Text>
-            {'\n'}com clareza!
+            Importe seu{' '}
+            <Text style={{ color: cores.laranjaDestaque }}>currículo em PDF</Text>
+            {'\n'}e decole!
           </Text>
           <Text style={[tipografia.apoio, { color: cores.textoSecundario, textAlign: 'center', marginTop: 4 }]}>
-            Cole seu texto ou importe um arquivo .txt para identificar competências, seções e
-            ortografia em tempo real.
+            Envie seu currículo em PDF (obrigatório). O sistema extrai o texto do PDF e cruza com as palavras-chave das vagas para calcular sua compatibilidade real.
           </Text>
         </View>
 
         {erro ? <ErrorState mensagem={erro} /> : null}
 
-        {isExemplo ? (
+        {curriculo.nomeArquivo ? (
+          <NoticeBanner
+            tipo="info"
+            titulo={`PDF Selecionado: ${curriculo.nomeArquivo}`}
+            mensagem="Texto do PDF extraído com sucesso. Suas palavras-chave estão sincronizadas com o painel de vagas."
+          />
+        ) : isExemplo ? (
           <NoticeBanner
             tipo="atencao"
-            titulo="Currículo de exemplo carregado"
-            mensagem="Estes dados são demonstrativos. Edite o texto ou toque em 'Limpar' para inserir o seu."
+            titulo="Currículo demonstrativo ativo"
+            mensagem="Estes dados são demonstrativos da UNDB. Toque em 'Importar PDF' para carregar seu arquivo oficial (.pdf)."
           />
         ) : null}
 
@@ -106,21 +112,21 @@ export function CurriculumScreen() {
 
             <View style={styles.statItem}>
               <Text style={[tipografia.rotulo, { color: cores.textoSecundario }]}>
-                SINCRONIZAÇÃO
+                FORMATO
               </Text>
               <Text
                 style={[
                   tipografia.textoDestaque,
-                  { color: salvando ? cores.destaque : cores.ok, marginTop: 4 },
+                  { color: curriculo.nomeArquivo ? cores.ok : cores.laranjaDestaque, marginTop: 4 },
                 ]}
               >
-                {salvando ? 'Salvando...' : 'Salvo ✓'}
+                {curriculo.nomeArquivo ? 'PDF ✓' : 'Exemplo'}
               </Text>
             </View>
           </View>
 
           <Text style={[tipografia.rotulo, { color: cores.textoSecundario, marginTop: 14 }]}>
-            ESTRUTURA RECONHECIDA
+            ESTRUTURA RECONHECIDA NO PDF
           </Text>
           <View style={styles.chipsRow}>
             <Badge
@@ -147,12 +153,14 @@ export function CurriculumScreen() {
 
           <View style={styles.actionsRow}>
             <Button
-              titulo="Importar .txt  ↗"
-              onPress={importarTxt}
+              titulo="Importar PDF (.pdf)  📄"
+              onPress={importarPdf}
               variante="primario"
               compacto
-              style={styles.actionBtn}
+              style={styles.actionBtnPrimary}
             />
+          </View>
+          <View style={[styles.actionsRow, { marginTop: spacing.xs }]}>
             <Button
               titulo="Usar exemplo"
               onPress={usarExemplo}
@@ -170,10 +178,10 @@ export function CurriculumScreen() {
           </View>
         </Card>
 
-        {/* Editor de texto */}
+        {/* Editor de texto / Visualizador do PDF extraído */}
         <Input
-          rotulo="TEXTO DO SEU CURRÍCULO"
-          placeholder="Cole aqui seu currículo completo (Objetivo, Formação, Projetos, Habilidades, Idiomas)..."
+          rotulo="TEXTO EXTRAÍDO DO CURRÍCULO (PDF)"
+          placeholder="Importe seu arquivo .pdf para extrair automaticamente o texto, ou ajuste os dados aqui..."
           multiline
           value={texto}
           onChangeText={atualizarTexto}
@@ -298,6 +306,10 @@ const styles = StyleSheet.create({
   actionBtn: {
     flex: 1,
     paddingHorizontal: spacing.sm,
+  },
+  actionBtnPrimary: {
+    flex: 1,
+    minHeight: 44,
   },
   compactBoxHeader: {
     paddingHorizontal: spacing.md,

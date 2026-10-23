@@ -75,10 +75,28 @@ export class CalculadoraDeAderencia {
       }
     }
 
-    const aderencia =
-      vaga.requisitos.length === 0
-        ? null
-        : Math.round((100 * somaPesosAtendidos) / somaPesosTotal);
+    // Processamento de palavras-chave da vaga
+    const palavrasChave = vaga.palavrasChave || [];
+    const palavrasAtendidas: string[] = [];
+    const palavrasFaltantes: string[] = [];
+
+    if (palavrasChave.length > 0 && curriculoNormalizado) {
+      for (const pc of palavrasChave) {
+        const pcNorm = normalizarTexto(pc);
+        if (contemTermo(curriculoNormalizado, pcNorm)) {
+          palavrasAtendidas.push(pc);
+        } else {
+          palavrasFaltantes.push(pc);
+        }
+      }
+    }
+
+    let aderencia: number | null = null;
+    if (vaga.requisitos.length > 0) {
+      aderencia = Math.round((100 * somaPesosAtendidos) / somaPesosTotal);
+    } else if (palavrasChave.length > 0) {
+      aderencia = Math.round((100 * palavrasAtendidas.length) / palavrasChave.length);
+    }
 
     const avaliacao = AvaliadorDeCurriculo.avaliar(textoCurriculo);
     const ortografia = VerificadorOrtografico.verificar(textoCurriculo);
@@ -87,14 +105,61 @@ export class CalculadoraDeAderencia {
       vagaId: vaga.id,
       aderencia,
       nivel: obterNivelDeAderencia(aderencia),
-      totalRequisitos: vaga.requisitos.length,
-      requisitosAtendidosCount: requisitosAtendidos.length,
+      totalRequisitos: vaga.requisitos.length > 0 ? vaga.requisitos.length : palavrasChave.length,
+      requisitosAtendidosCount: vaga.requisitos.length > 0 ? requisitosAtendidos.length : palavrasAtendidas.length,
       requisitosAtendidos,
       requisitosFaltantes,
+      palavrasChave,
+      palavrasAtendidas,
+      palavrasFaltantes,
       pontosFortes: avaliacao.pontosFortes,
       pontosFracos: avaliacao.pontosFracos,
       ortografia,
       origemAnalise,
+    };
+  }
+
+  static calcularPorPalavrasChave(
+    textoCurriculo: string,
+    palavrasChave: string[],
+  ): {
+    aderencia: number | null;
+    palavrasAtendidas: string[];
+    palavrasFaltantes: string[];
+    total: number;
+  } {
+    if (!palavrasChave || palavrasChave.length === 0) {
+      return { aderencia: null, palavrasAtendidas: [], palavrasFaltantes: [], total: 0 };
+    }
+
+    const norm = normalizarTexto(textoCurriculo || '');
+    if (!norm) {
+      return {
+        aderencia: 0,
+        palavrasAtendidas: [],
+        palavrasFaltantes: [...palavrasChave],
+        total: palavrasChave.length,
+      };
+    }
+
+    const atendidas: string[] = [];
+    const faltantes: string[] = [];
+
+    for (const pc of palavrasChave) {
+      const pcNorm = normalizarTexto(pc);
+      if (contemTermo(norm, pcNorm)) {
+        atendidas.push(pc);
+      } else {
+        faltantes.push(pc);
+      }
+    }
+
+    const aderencia = Math.round((100 * atendidas.length) / palavrasChave.length);
+    return {
+      aderencia,
+      palavrasAtendidas: atendidas,
+      palavrasFaltantes: faltantes,
+      total: palavrasChave.length,
     };
   }
 

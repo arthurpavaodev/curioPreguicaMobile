@@ -1,6 +1,7 @@
 import React from 'react';
-import { Text } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { useAppData } from '../providers/AppDataProvider';
 import { useTheme } from '../providers/ThemeProvider';
 import { fontNames } from '../../theme';
@@ -36,16 +37,139 @@ const StudentTab = createBottomTabNavigator<StudentTabParamList>();
 const TeiaTab = createBottomTabNavigator<TeiaTabParamList>();
 const CompanyTab = createBottomTabNavigator<CompanyTabParamList>();
 
-function TabIcon({ symbol, color }: { symbol: string; color: string }) {
+// Ícones SVG Vetoriais Nativos com ViewBox 24x24 padronizada
+function HomeIcon({ color, focused }: { color: string; focused: boolean }) {
   return (
-    <Text style={{ fontSize: 15, color, fontWeight: '700' }} accessible={false}>
-      {symbol}
-    </Text>
+    <Svg width={21} height={21} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1h-5v-6h-6v6H4a1 1 0 01-1-1V9.5z"
+        stroke={color}
+        strokeWidth={focused ? 2.2 : 1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill={focused ? color : 'none'}
+        fillOpacity={focused ? 0.15 : 0}
+      />
+    </Svg>
+  );
+}
+
+function CurriculumIcon({ color, focused }: { color: string; focused: boolean }) {
+  return (
+    <Svg width={21} height={21} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"
+        stroke={color}
+        strokeWidth={focused ? 2.2 : 1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M14 2v6h6M16 13H8M16 17H8M10 9H8"
+        stroke={color}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+      />
+    </Svg>
+  );
+}
+
+function JobsIcon({ color, focused }: { color: string; focused: boolean }) {
+  return (
+    <Svg width={21} height={21} viewBox="0 0 24 24" fill="none">
+      <Rect
+        x={2}
+        y={7}
+        width={20}
+        height={14}
+        rx={2}
+        stroke={color}
+        strokeWidth={focused ? 2.2 : 1.8}
+        fill={focused ? color : 'none'}
+        fillOpacity={focused ? 0.15 : 0}
+      />
+      <Path
+        d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"
+        stroke={color}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+      />
+    </Svg>
+  );
+}
+
+function DiagnosisIcon({ color, focused }: { color: string; focused: boolean }) {
+  return (
+    <Svg width={21} height={21} viewBox="0 0 24 24" fill="none">
+      <Circle cx={12} cy={12} r={9} stroke={color} strokeWidth={focused ? 2.2 : 1.8} />
+      <Path
+        d="M12 8v8M8 12h8"
+        stroke={color}
+        strokeWidth={focused ? 2.2 : 1.8}
+        strokeLinecap="round"
+      />
+    </Svg>
+  );
+}
+
+function FlightPlanIcon({ color, focused }: { color: string; focused: boolean }) {
+  return (
+    <Svg width={21} height={21} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"
+        stroke={color}
+        strokeWidth={focused ? 2.2 : 1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill={focused ? color : 'none'}
+        fillOpacity={focused ? 0.15 : 0}
+      />
+    </Svg>
+  );
+}
+
+function ChartIcon({ color, focused }: { color: string; focused: boolean }) {
+  return (
+    <Svg width={21} height={21} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M18 20V10M12 20V4M6 20v-6"
+        stroke={color}
+        strokeWidth={focused ? 2.2 : 1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+function CandidateIcon({ color, focused }: { color: string; focused: boolean }) {
+  return (
+    <Svg width={21} height={21} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"
+        stroke={color}
+        strokeWidth={focused ? 2.2 : 1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Circle cx={9} cy={7} r={4} stroke={color} strokeWidth={focused ? 2.2 : 1.8} />
+      <Path
+        d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"
+        stroke={color}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+      />
+    </Svg>
   );
 }
 
 export function StudentTabNavigator() {
   const { cores } = useTheme();
+  const insets = useSafeAreaInsets();
+
+  // Cálculo seguro da barra inferior respeitando o Home Indicator do iPhone
+  const tabBottomPadding = Math.max(insets.bottom, 6);
+  const tabHeight = 52 + tabBottomPadding;
 
   return (
     <StudentTab.Navigator
@@ -56,13 +180,25 @@ export function StudentTabNavigator() {
         tabBarStyle: {
           backgroundColor: cores.superficie,
           borderTopColor: cores.linha,
-          height: 58,
-          paddingBottom: 6,
-          paddingTop: 4,
+          borderTopWidth: 1,
+          height: tabHeight,
+          paddingBottom: tabBottomPadding,
+          paddingTop: 6,
+          elevation: 8,
+          shadowColor: '#000000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: cores.isDark ? 0.35 : 0.05,
+          shadowRadius: 6,
         },
         tabBarLabelStyle: {
           fontFamily: fontNames.plexSans600,
-          fontSize: 11.5,
+          fontSize: 10.5,
+          marginTop: 2,
+        },
+        tabBarItemStyle: {
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: 48,
         },
       }}
     >
@@ -70,7 +206,7 @@ export function StudentTabNavigator() {
         name="Inicio"
         options={{
           tabBarLabel: 'Início',
-          tabBarIcon: ({ color }) => <TabIcon symbol="⌂" color={color} />,
+          tabBarIcon: ({ color, focused }) => <HomeIcon color={color} focused={focused} />,
         }}
       >
         {({ navigation }) => (
@@ -88,7 +224,7 @@ export function StudentTabNavigator() {
         component={CurriculumScreen}
         options={{
           tabBarLabel: 'Currículo',
-          tabBarIcon: ({ color }) => <TabIcon symbol="≡" color={color} />,
+          tabBarIcon: ({ color, focused }) => <CurriculumIcon color={color} focused={focused} />,
         }}
       />
 
@@ -96,7 +232,7 @@ export function StudentTabNavigator() {
         name="Vagas"
         options={{
           tabBarLabel: 'Vagas',
-          tabBarIcon: ({ color }) => <TabIcon symbol="◎" color={color} />,
+          tabBarIcon: ({ color, focused }) => <JobsIcon color={color} focused={focused} />,
         }}
       >
         {({ navigation }) => (
@@ -110,7 +246,7 @@ export function StudentTabNavigator() {
         name="Diagnostico"
         options={{
           tabBarLabel: 'Diagnóstico',
-          tabBarIcon: ({ color }) => <TabIcon symbol="⊕" color={color} />,
+          tabBarIcon: ({ color, focused }) => <DiagnosisIcon color={color} focused={focused} />,
         }}
       >
         {({ navigation }) => (
@@ -126,7 +262,7 @@ export function StudentTabNavigator() {
         component={FlightPlanScreen}
         options={{
           tabBarLabel: 'Plano de Voo',
-          tabBarIcon: ({ color }) => <TabIcon symbol="✓" color={color} />,
+          tabBarIcon: ({ color, focused }) => <FlightPlanIcon color={color} focused={focused} />,
         }}
       />
     </StudentTab.Navigator>
@@ -135,6 +271,9 @@ export function StudentTabNavigator() {
 
 export function TeiaTabNavigator() {
   const { cores } = useTheme();
+  const insets = useSafeAreaInsets();
+  const tabBottomPadding = Math.max(insets.bottom, 6);
+  const tabHeight = 52 + tabBottomPadding;
 
   return (
     <TeiaTab.Navigator
@@ -145,13 +284,25 @@ export function TeiaTabNavigator() {
         tabBarStyle: {
           backgroundColor: cores.superficie,
           borderTopColor: cores.linha,
-          height: 58,
-          paddingBottom: 6,
-          paddingTop: 4,
+          borderTopWidth: 1,
+          height: tabHeight,
+          paddingBottom: tabBottomPadding,
+          paddingTop: 6,
+          elevation: 8,
+          shadowColor: '#000000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: cores.isDark ? 0.35 : 0.05,
+          shadowRadius: 6,
         },
         tabBarLabelStyle: {
           fontFamily: fontNames.plexSans600,
-          fontSize: 12,
+          fontSize: 11,
+          marginTop: 2,
+        },
+        tabBarItemStyle: {
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: 48,
         },
       }}
     >
@@ -160,14 +311,14 @@ export function TeiaTabNavigator() {
         component={TeiaDashboardScreen}
         options={{
           tabBarLabel: 'Painel TEIA',
-          tabBarIcon: ({ color }) => <TabIcon symbol="▤" color={color} />,
+          tabBarIcon: ({ color, focused }) => <ChartIcon color={color} focused={focused} />,
         }}
       />
       <TeiaTab.Screen
         name="Oportunidades"
         options={{
           tabBarLabel: 'Oportunidades',
-          tabBarIcon: ({ color }) => <TabIcon symbol="◎" color={color} />,
+          tabBarIcon: ({ color, focused }) => <JobsIcon color={color} focused={focused} />,
         }}
       >
         {({ navigation }) => (
@@ -182,6 +333,9 @@ export function TeiaTabNavigator() {
 
 export function CompanyTabNavigator() {
   const { cores } = useTheme();
+  const insets = useSafeAreaInsets();
+  const tabBottomPadding = Math.max(insets.bottom, 6);
+  const tabHeight = 52 + tabBottomPadding;
 
   return (
     <CompanyTab.Navigator
@@ -192,13 +346,25 @@ export function CompanyTabNavigator() {
         tabBarStyle: {
           backgroundColor: cores.superficie,
           borderTopColor: cores.linha,
-          height: 58,
-          paddingBottom: 6,
-          paddingTop: 4,
+          borderTopWidth: 1,
+          height: tabHeight,
+          paddingBottom: tabBottomPadding,
+          paddingTop: 6,
+          elevation: 8,
+          shadowColor: '#000000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: cores.isDark ? 0.35 : 0.05,
+          shadowRadius: 6,
         },
         tabBarLabelStyle: {
           fontFamily: fontNames.plexSans600,
-          fontSize: 12,
+          fontSize: 11,
+          marginTop: 2,
+        },
+        tabBarItemStyle: {
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: 48,
         },
       }}
     >
@@ -206,7 +372,7 @@ export function CompanyTabNavigator() {
         name="Vagas"
         options={{
           tabBarLabel: 'Minhas Vagas',
-          tabBarIcon: ({ color }) => <TabIcon symbol="◎" color={color} />,
+          tabBarIcon: ({ color, focused }) => <JobsIcon color={color} focused={focused} />,
         }}
       >
         {({ navigation }) => (
@@ -221,7 +387,7 @@ export function CompanyTabNavigator() {
         component={CompanyCandidatesScreen}
         options={{
           tabBarLabel: 'Candidatos',
-          tabBarIcon: ({ color }) => <TabIcon symbol="★" color={color} />,
+          tabBarIcon: ({ color, focused }) => <CandidateIcon color={color} focused={focused} />,
         }}
       />
     </CompanyTab.Navigator>

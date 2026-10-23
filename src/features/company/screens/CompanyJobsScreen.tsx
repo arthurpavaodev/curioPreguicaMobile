@@ -31,6 +31,7 @@ export function CompanyJobsScreen({ onVerCandidatosVaga }: CompanyJobsScreenProp
   const [titulo, setTitulo] = useState('');
   const [empresa, setEmpresa] = useState('');
   const [descricao, setDescricao] = useState('');
+  const [palavrasChaveTexto, setPalavrasChaveTexto] = useState('');
   const [erroForm, setErroForm] = useState<string | null>(null);
   const [cadastrando, setCadastrando] = useState(false);
 
@@ -48,10 +49,12 @@ export function CompanyJobsScreen({ onVerCandidatosVaga }: CompanyJobsScreenProp
         empresa: empresa.trim() || 'Minha Empresa',
         texto: descricao.trim(),
         origem: 'empresa',
+        palavrasChave: palavrasChaveTexto,
       });
       setTitulo('');
       setEmpresa('');
       setDescricao('');
+      setPalavrasChaveTexto('');
       setFormAberto(false);
       onVerCandidatosVaga(criada.id);
     } catch (e) {
@@ -121,6 +124,13 @@ export function CompanyJobsScreen({ onVerCandidatosVaga }: CompanyJobsScreenProp
                   />
 
                   <Input
+                    rotulo="PALAVRAS-CHAVE DA VAGA (SEPARADAS POR VÍRGULA)"
+                    placeholder="Ex: React Native, TypeScript, Git, SQL, Firebase"
+                    value={palavrasChaveTexto}
+                    onChangeText={setPalavrasChaveTexto}
+                  />
+
+                  <Input
                     rotulo="DESCRIÇÃO E REQUISITOS"
                     placeholder="Liste os requisitos obrigatórios e diferenciais..."
                     multiline
@@ -158,7 +168,7 @@ export function CompanyJobsScreen({ onVerCandidatosVaga }: CompanyJobsScreenProp
                   {item.titulo}
                 </Text>
                 <Text style={[tipografia.apoio, { color: cores.textoSecundario, marginTop: 2 }]}>
-                  {item.empresa} · {item.requisitos.length} requisitos extraídos
+                  {item.empresa} · {item.palavrasChave?.length || item.requisitos.length} palavras-chave
                 </Text>
               </View>
 
@@ -167,6 +177,19 @@ export function CompanyJobsScreen({ onVerCandidatosVaga }: CompanyJobsScreenProp
                 variante={item.origem === 'exemplo' ? 'padrao' : 'ok'}
               />
             </View>
+
+            {item.palavrasChave && item.palavrasChave.length > 0 && (
+              <View style={styles.keywordChipsRow}>
+                {item.palavrasChave.slice(0, 6).map((kw, i) => (
+                  <Badge key={i} rotulo={kw} variante="padrao" />
+                ))}
+                {item.palavrasChave.length > 6 && (
+                  <Text style={[tipografia.apoio, { color: cores.textoSecundario, alignSelf: 'center' }]}>
+                    +{item.palavrasChave.length - 6}
+                  </Text>
+                )}
+              </View>
+            )}
 
             <View style={[styles.cardActions, { borderTopColor: cores.linha }]}>
               <View style={{ flexDirection: 'row', gap: spacing.xs, marginLeft: 'auto' }}>
@@ -227,6 +250,12 @@ const styles = StyleSheet.create({
   },
   jobCard: {
     paddingVertical: spacing.md,
+  },
+  keywordChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 10,
   },
   cardHeader: {
     flexDirection: 'row',

@@ -6,3 +6,4 @@ export * from './requirementExtractor';
 export * from './adherenceCalculator';
 export * from './flightPlanGenerator';
 export * from './studentRanker';
+export * from './pdfExtractor';

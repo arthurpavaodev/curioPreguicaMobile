@@ -15,6 +15,7 @@ export function useCurriculum() {
     salvarCurriculoAgora,
     usarCurriculoExemplo,
     limparCurriculo,
+    importarCurriculoPdf,
     importarCurriculoTxt,
   } = useAppData();
 
@@ -39,6 +40,7 @@ export function useCurriculum() {
     salvarAgora: salvarCurriculoAgora,
     usarExemplo: usarCurriculoExemplo,
     limpar: limparCurriculo,
+    importarPdf: importarCurriculoPdf,
     importarTxt: importarCurriculoTxt,
   };
 }

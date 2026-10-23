@@ -9,15 +9,19 @@ import React, {
 } from 'react';
 import {
   ALUNOS_EXEMPLO,
+  ApplicationRepository,
   CURRICULO_EXEMPLO_TEXTO,
   CurriculumRepository,
   FlightPlanRepository,
   JobRepository,
   PreferencesRepository,
+  ResultadoImportacaoPdf,
   StudentRepository,
+  applicationRepository as defaultApplicationRepo,
   criarCurriculoExemplo,
   curriculumRepository as defaultCurriculumRepo,
   flightPlanRepository as defaultFlightPlanRepo,
+  importarArquivoPdf,
   importarArquivoTxt,
   jobRepository as defaultJobRepo,
   preferencesRepository as defaultPreferencesRepo,
@@ -28,6 +32,7 @@ import {
   AnaliseCompletaCurriculo,
   AvaliadorDeCurriculo,
   CalculadoraDeAderencia,
+  Candidatura,
   Curriculo,
   Diagnostico,
   GeradorDePlano,
@@ -50,7 +55,9 @@ export interface AppRepositories {
   flightPlanRepo?: FlightPlanRepository;
   preferencesRepo?: PreferencesRepository;
   studentRepo?: StudentRepository;
+  applicationRepo?: ApplicationRepository;
   fileReader?: () => Promise<string | null>;
+  pdfReader?: () => Promise<ResultadoImportacaoPdf | null>;
 }
 
 export interface AppDataContextValue {
@@ -65,6 +72,7 @@ export interface AppDataContextValue {
   vagaSelecionada: Vaga | null;
   progressoMap: Record<string, boolean>;
   alunos: Aluno[];
+  candidaturas: Candidatura[];
   carregando: boolean;
   salvandoCurriculo: boolean;
   erro: string | null;
@@ -82,12 +90,16 @@ export interface AppDataContextValue {
   salvarCurriculoAgora: () => Promise<void>;
   usarCurriculoExemplo: () => Promise<void>;
   limparCurriculo: () => Promise<void>;
+  importarCurriculoPdf: () => Promise<boolean>;
   importarCurriculoTxt: () => Promise<boolean>;
+  candidatarVaga: (vagaId: string) => Promise<boolean>;
+  jaCandidatouNaVaga: (vagaId: string) => boolean;
   adicionarVaga: (input: {
     titulo: string;
     empresa?: string;
     texto: string;
     origem: OrigemVaga;
+    palavrasChave?: string[] | string;
   }) => Promise<Vaga>;
   removerVaga: (id: string) => Promise<void>;
   alternarEtapaPlano: (etapaId: string, concluida: boolean) => Promise<void>;
@@ -107,7 +119,9 @@ export function AppDataProvider({ repositories, children }: AppDataProviderProps
   const flightPlanRepo = repositories?.flightPlanRepo ?? defaultFlightPlanRepo;
   const preferencesRepo = repositories?.preferencesRepo ?? defaultPreferencesRepo;
   const studentRepo = repositories?.studentRepo ?? defaultStudentRepo;
+  const applicationRepo = repositories?.applicationRepo ?? defaultApplicationRepo;
   const fileReader = repositories?.fileReader ?? importarArquivoTxt;
+  const pdfReader = repositories?.pdfReader ?? importarArquivoPdf;
 
   const [perfil, setPerfil] = useState<PerfilUsuario>('aluno');
   const [curriculo, setCurriculo] = useState<Curriculo>(() => criarCurriculoExemplo());
@@ -116,6 +130,7 @@ export function AppDataProvider({ repositories, children }: AppDataProviderProps
   const [vagaSelecionadaId, setVagaSelecionadaId] = useState<string | null>('ex1');
   const [progressoMap, setProgressoMap] = useState<Record<string, boolean>>({});
   const [alunos, setAlunos] = useState<Aluno[]>(ALUNOS_EXEMPLO);
+  const [candidaturas, setCandidaturas] = useState<Candidatura[]>([]);
   const [carregando, setCarregando] = useState<boolean>(true);
   const [salvandoCurriculo, setSalvandoCurriculo] = useState<boolean>(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -133,6 +148,7 @@ export function AppDataProvider({ repositories, children }: AppDataProviderProps
         vagasCarregadas,
         progressoSalvo,
         alunosCarregados,
+        candidaturasSalvas,
       ] = await Promise.all([
         preferencesRepo.obterPerfil(),
         preferencesRepo.obterVagaSelecionadaId(),
@@ -140,6 +156,7 @@ export function AppDataProvider({ repositories, children }: AppDataProviderProps
         jobRepo.listarTodas('aluno'),
         flightPlanRepo.obter(),
         studentRepo.listar(),
+        applicationRepo.listar(),
       ]);
 
       setPerfil(perfilSalvo);
@@ -148,6 +165,7 @@ export function AppDataProvider({ repositories, children }: AppDataProviderProps
       setTodasVagas(vagasCarregadas);
       setProgressoMap(progressoSalvo);
       setAlunos(alunosCarregados);
+      setCandidaturas(candidaturasSalvas);
 
       const vagaExiste = vagasCarregadas.some((v) => v.id === vagaIdSalva);
       const idValido = vagaExiste ? vagaIdSalva : (vagasCarregadas[0]?.id ?? null);
@@ -157,7 +175,7 @@ export function AppDataProvider({ repositories, children }: AppDataProviderProps
     } finally {
       setCarregando(false);
     }
-  }, [curriculumRepo, flightPlanRepo, jobRepo, preferencesRepo, studentRepo]);
+  }, [applicationRepo, curriculumRepo, flightPlanRepo, jobRepo, preferencesRepo, studentRepo]);
 
   useEffect(() => {
     recarregarDados();
@@ -318,6 +336,30 @@ export function AppDataProvider({ repositories, children }: AppDataProviderProps
     }
   }, [curriculumRepo]);
 
+  const importarCurriculoPdf = useCallback(async (): Promise<boolean> => {
+    try {
+      setSalvandoCurriculo(true);
+      const resultado = await pdfReader();
+      if (resultado && resultado.texto !== null) {
+        setTextoCurriculo(resultado.texto);
+        textoPendenteRef.current = resultado.texto;
+        const salvo = await curriculumRepo.salvarTexto(
+          resultado.texto,
+          resultado.nomeArquivo,
+          'pdf',
+        );
+        setCurriculo(salvo);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Erro ao importar arquivo PDF.');
+      return false;
+    } finally {
+      setSalvandoCurriculo(false);
+    }
+  }, [curriculumRepo, pdfReader]);
+
   const importarCurriculoTxt = useCallback(async (): Promise<boolean> => {
     try {
       setSalvandoCurriculo(true);
@@ -336,12 +378,42 @@ export function AppDataProvider({ repositories, children }: AppDataProviderProps
     }
   }, [fileReader, persistirCurriculo]);
 
+  const candidatarVaga = useCallback(
+    async (vagaId: string): Promise<boolean> => {
+      try {
+        const diag = vagasComDiagnostico.find((v) => v.vaga.id === vagaId);
+        const compatibilidade = diag ? diag.aderencia : null;
+        await applicationRepo.candidatar({
+          vagaId,
+          alunoId: 'aluno_atual',
+          alunoNome: 'Você (Aluno UNDB)',
+          compatibilidade,
+        });
+        const todas = await applicationRepo.listar();
+        setCandidaturas(todas);
+        return true;
+      } catch (e) {
+        setErro(e instanceof Error ? e.message : 'Erro ao enviar candidatura.');
+        return false;
+      }
+    },
+    [applicationRepo, vagasComDiagnostico],
+  );
+
+  const jaCandidatouNaVaga = useCallback(
+    (vagaId: string): boolean => {
+      return candidaturas.some((c) => c.vagaId === vagaId && c.alunoId === 'aluno_atual');
+    },
+    [candidaturas],
+  );
+
   const adicionarVaga = useCallback(
     async (input: {
       titulo: string;
       empresa?: string;
       texto: string;
       origem: OrigemVaga;
+      palavrasChave?: string[] | string;
     }): Promise<Vaga> => {
       const novaVaga = await jobRepo.criarEAdicionar(input);
       const atualizadas = await jobRepo.listarTodas('aluno');
@@ -393,6 +465,7 @@ export function AppDataProvider({ repositories, children }: AppDataProviderProps
       vagaSelecionada,
       progressoMap,
       alunos,
+      candidaturas,
       carregando,
       salvandoCurriculo,
       erro,
@@ -406,7 +479,10 @@ export function AppDataProvider({ repositories, children }: AppDataProviderProps
       salvarCurriculoAgora,
       usarCurriculoExemplo,
       limparCurriculo,
+      importarCurriculoPdf,
       importarCurriculoTxt,
+      candidatarVaga,
+      jaCandidatouNaVaga,
       adicionarVaga,
       removerVaga,
       alternarEtapaPlano,
@@ -423,6 +499,7 @@ export function AppDataProvider({ repositories, children }: AppDataProviderProps
       vagaSelecionadaId,
       progressoMap,
       alunos,
+      candidaturas,
       carregando,
       salvandoCurriculo,
       erro,
@@ -436,7 +513,10 @@ export function AppDataProvider({ repositories, children }: AppDataProviderProps
       salvarCurriculoAgora,
       usarCurriculoExemplo,
       limparCurriculo,
+      importarCurriculoPdf,
       importarCurriculoTxt,
+      candidatarVaga,
+      jaCandidatouNaVaga,
       adicionarVaga,
       removerVaga,
       alternarEtapaPlano,

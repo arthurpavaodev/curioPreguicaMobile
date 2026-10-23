@@ -1,4 +1,9 @@
-import { curriculumRepository, importarArquivoTxt } from '../../../data';
+import {
+  ResultadoImportacaoPdf,
+  curriculumRepository,
+  importarArquivoPdf,
+  importarArquivoTxt,
+} from '../../../data';
 import { AnaliseCompletaCurriculo, Curriculo, avaliarCurriculoCompleto } from '../../../domain';
 
 export const curriculumService = {
@@ -6,12 +11,20 @@ export const curriculumService = {
     return curriculumRepository.obter();
   },
 
-  async salvarCurriculo(texto: string): Promise<Curriculo> {
-    return curriculumRepository.salvarTexto(texto);
+  async salvarCurriculo(
+    texto: string,
+    nomeArquivo?: string,
+    formatoOrigem?: 'pdf' | 'manual' | 'exemplo',
+  ): Promise<Curriculo> {
+    return curriculumRepository.salvarTexto(texto, nomeArquivo, formatoOrigem);
   },
 
   async limparCurriculo(): Promise<Curriculo> {
     return curriculumRepository.limpar();
+  },
+
+  async importarDeArquivoPdf(): Promise<ResultadoImportacaoPdf | null> {
+    return importarArquivoPdf();
   },
 
   async importarDeArquivoTxt(): Promise<string | null> {
