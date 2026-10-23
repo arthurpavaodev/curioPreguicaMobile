@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: teia_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-teia_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-teia_secret_pass_2026}
+      POSTGRES_DB: ${POSTGRES_DB:-teia_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-teia_user} -d ${POSTGRES_DB:-teia_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - teia_network
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: teia_api
+    restart: always
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-teia_user}:${POSTGRES_PASSWORD:-teia_secret_pass_2026}@postgres:5432/${POSTGRES_DB:-teia_db}?schema=public
+      PORT: 3000
+      HOST: 0.0.0.0
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - teia_network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  teia_network:
+    driver: bridge

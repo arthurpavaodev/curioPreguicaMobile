@@ -1,0 +1,52 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "debian-openssl-3.0.x"]
+}
+
+model Vaga {
+  id         String   @id
+  titulo     String
+  empresa    String
+  descricao  String   @db.Text
+  origem     String   @default("empresa") // "exemplo" | "empresa" | "aluno"
+  requisitos Json     // Lista de { id, rotulo, peso, sinonimos, grupo, obrigatorio }
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("vagas")
+}
+
+model Curriculo {
+  id               String   @id @default("principal")
+  texto            String   @db.Text
+  palavras         Int      @default(0)
+  secoesDetectadas Json     // { objetivo: boolean, formacao: boolean, ... }
+  atualizadoEm     DateTime @default(now()) @updatedAt
+
+  @@map("curriculos")
+}
+
+model ProgressoPlanoVoo {
+  etapaId   String   @id
+  concluida Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+
+  @@map("progresso_plano_voo")
+}
+
+model Aluno {
+  id        String   @id
+  nome      String
+  curso     String
+  periodo   String
+  curriculo String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("alunos")
+}

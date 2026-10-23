@@ -8,6 +8,7 @@ export default [
       '.expo/**',
       'referencia/**',
       'coverage/**',
+      'server/**',
       '*.config.js',
       '*.config.mjs',
       'jest.setup.js',
