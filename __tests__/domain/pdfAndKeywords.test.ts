@@ -42,7 +42,7 @@ describe('Extração de texto de PDF e Compatibilidade por Palavras-Chave', () =
       expect(decodificado).toBe(texto);
     });
 
-    test('extrai texto de PDF com stream comprimida via FlateDecode (zlib)', () => {
+    test('extrai texto de PDF com stream comprimida via FlateDecode (zlib)', async () => {
       const streamContent =
         'BT /F1 12 Tf 72 712 Td (Aluno da UNDB) Tj 0 -15 Td [(React Native) 10 (TypeScript) 10 (Git) 10 (SQL)] TJ ET';
       const compressed = fflate.zlibSync(fflate.strToU8(streamContent));
@@ -59,7 +59,7 @@ describe('Extração de texto de PDF e Compatibilidade por Palavras-Chave', () =
       ];
       const pdfData = pdfParts.join('');
 
-      const textoExtraido = extrairTextoDePdf(pdfData);
+      const textoExtraido = await extrairTextoDePdf(pdfData);
 
       expect(textoExtraido).toContain('Aluno da UNDB');
       expect(textoExtraido).toContain('React Native');
@@ -68,7 +68,7 @@ describe('Extração de texto de PDF e Compatibilidade por Palavras-Chave', () =
       expect(textoExtraido).toContain('SQL');
     });
 
-    test('extrai texto a partir de base64 de PDF', () => {
+    test('extrai texto a partir de base64 de PDF', async () => {
       const streamContent = 'BT (Curriculo Joao) Tj [(Node.js) 10 (PostgreSQL)] TJ ET';
       const compressed = fflate.zlibSync(fflate.strToU8(streamContent));
       const compressedBinary = String.fromCharCode.apply(null, Array.from(compressed));
@@ -79,11 +79,47 @@ describe('Extração de texto de PDF e Compatibilidade por Palavras-Chave', () =
         '\nendstream\nendobj\n%%EOF';
 
       const base64 = btoa(pdfString);
-      const extraido = extrairTextoDePdf(base64);
+      const extraido = await extrairTextoDePdf(base64);
 
       expect(extraido).toContain('Curriculo Joao');
       expect(extraido).toContain('Node.js');
       expect(extraido).toContain('PostgreSQL');
+    });
+
+    test('decodifica glifos usando tabela /ToUnicode CMap de fontes subsetadas', async () => {
+      const cmap = [
+        '/CIDInit /ProcSet findresource begin 12 dict begin begincmap',
+        '1 beginbfrange <0001> <0003> <0041> endbfrange', // 0001->A, 0002->B, 0003->C
+        '1 beginbfchar <0004> <0052> endbfchar', // 0004->R
+        '1 beginbfchar <0005> <0065> endbfchar', // 0005->e
+        '1 beginbfchar <0006> <0061> endbfchar', // 0006->a
+        '1 beginbfchar <0007> <0063> endbfchar', // 0007->c
+        '1 beginbfchar <0008> <0074> endbfchar', // 0008->t
+        'endcmap CMapName currentdict /CMap defineresource pop end end',
+      ].join('\n');
+      const cmapComp = fflate.zlibSync(fflate.strToU8(cmap));
+      const cmapBinary = String.fromCharCode.apply(null, Array.from(cmapComp));
+
+      const content = 'BT /F1 12 Tf 72 712 Td (Dev:) Tj [<00040005000600070008> 10 <000100020003>] TJ ET';
+      const contentComp = fflate.zlibSync(fflate.strToU8(content));
+      const contentBinary = String.fromCharCode.apply(null, Array.from(contentComp));
+
+      const pdf = [
+        '%PDF-1.4\n',
+        '1 0 obj << /Type /Page /Contents 2 0 R >> endobj\n',
+        '2 0 obj << /Length ' + contentComp.length + ' /Filter /FlateDecode >>\nstream\n',
+        contentBinary,
+        '\nendstream\nendobj\n',
+        '3 0 obj << /Type /Font /ToUnicode 4 0 R >> endobj\n',
+        '4 0 obj << /Length ' + cmapComp.length + ' /Filter /FlateDecode >>\nstream\n',
+        cmapBinary,
+        '\nendstream\nendobj\nxref\ntrailer << /Root 1 0 R >>\n%%EOF',
+      ].join('');
+
+      const extraido = await extrairTextoDePdf(pdf);
+
+      expect(extraido).toContain('React');
+      expect(extraido).toContain('ABC');
     });
   });
 

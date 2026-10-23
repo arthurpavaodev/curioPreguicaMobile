@@ -1,16 +1,15 @@
 import * as fflate from 'fflate';
 
 /**
- * Utilitário de extração de texto de arquivos PDF em puro JavaScript.
- * Compatível com React Native / Hermes e Web sem dependências nativas ou NodeJS.
+ * Utilitário de extração de texto de PDFs padrão.
  *
  * Suporta:
- * - Streams descomprimidos e comprimidos com FlateDecode (zlib)
- * - Blocos de texto PDF (BT ... ET)
- * - Operadores de texto: Tj, TJ, ', "
- * - Strings literais (...) e escapes (\n, \r, \t, octais \ooo)
- * - Strings hexadecimais <...> (ASCII e UTF-16BE)
- * - Fallback heurístico para arquivos PDF com layouts não-padrão
+ * - Streams descomprimidas e comprimidas com FlateDecode (zlib/deflate)
+ * - Tabelas /ToUnicode CMaps (beginbfchar e beginbfrange) para fontes subsetadas (Canva, Word, Google Docs)
+ * - Operadores de renderização de texto padrão do PDF (BT ... ET, Tj, TJ, ', ")
+ * - Strings literais (...) com escapes octais e caracteres especiais
+ * - Strings hexadecimais <...> com mapeamento de glifos e UTF-16BE
+ * - Proteção estrita contra vazamento de bytes binários de fontes ou imagens embutidas
  */
 
 export function decodificarEscapesPdf(texto: string): string {
@@ -23,16 +22,143 @@ export function decodificarEscapesPdf(texto: string): string {
     .replace(/\\b/g, '\b')
     .replace(/\\([0-7]{1,3})/g, (_, octal: string) => {
       const code = parseInt(octal, 8);
-      // Suporte para caracteres comuns em português latin1
       return String.fromCharCode(code);
     });
 }
 
-export function decodificarStringHexPdf(hex: string): string {
-  const limpo = hex.replace(/\s+/g, '');
+/**
+ * Faz o parsing de tabelas /ToUnicode CMap embutidas no PDF.
+ * Mapeia índices de glifos da fonte para caracteres Unicode legíveis.
+ */
+export function processarCMapToUnicode(cmapStr: string, map: Map<string, string>): void {
+  // 1. beginbfchar ... endbfchar: mapeamento direto glifo -> unicode
+  // Exemplo: <0001> <004A> ou <0001> <004A006F>
+  const bfCharRegex = /beginbfchar([\s\S]*?)endbfchar/g;
+  let bfMatch: RegExpExecArray | null;
+
+  while ((bfMatch = bfCharRegex.exec(cmapStr)) !== null) {
+    const tokens = bfMatch[1].trim().split(/\s+/).filter(Boolean);
+    for (let i = 0; i < tokens.length - 1; i += 2) {
+      const srcHex = tokens[i].replace(/[<>]/g, '').toLowerCase();
+      const dstHex = tokens[i + 1].replace(/[<>]/g, '');
+      let dstStr = '';
+      for (let j = 0; j < dstHex.length; j += 4) {
+        const charCode = parseInt(dstHex.substring(j, j + 4), 16);
+        if (!isNaN(charCode)) {
+          dstStr += String.fromCharCode(charCode);
+        }
+      }
+      if (dstStr.length > 0) {
+        map.set(srcHex, dstStr);
+      }
+    }
+  }
+
+  // 2. beginbfrange ... endbfrange: intervalos de glifos
+  // Exemplo: <0001> <0005> <0041>
+  // Exemplo: <0001> <0002> [<0041> <0042>]
+  const bfRangeRegex = /beginbfrange([\s\S]*?)endbfrange/g;
+  let rgMatch: RegExpExecArray | null;
+
+  while ((rgMatch = bfRangeRegex.exec(cmapStr)) !== null) {
+    const tokens = rgMatch[1].trim().split(/\s+/).filter(Boolean);
+    let i = 0;
+    while (i < tokens.length) {
+      const startHex = tokens[i]?.replace(/[<>]/g, '').toLowerCase();
+      const endHex = tokens[i + 1]?.replace(/[<>]/g, '').toLowerCase();
+      const target = tokens[i + 2];
+      if (!startHex || !endHex || !target) break;
+
+      const start = parseInt(startHex, 16);
+      const end = parseInt(endHex, 16);
+      const hexLen = startHex.length;
+
+      if (target.startsWith('[')) {
+        let curr = start;
+        let arrIdx = i + 2;
+        while (arrIdx < tokens.length && curr <= end) {
+          const t = tokens[arrIdx].replace(/[<>[\]]/g, '');
+          if (t.length > 0) {
+            let s = '';
+            for (let j = 0; j < t.length; j += 4) {
+              const charCode = parseInt(t.substring(j, j + 4), 16);
+              if (!isNaN(charCode)) s += String.fromCharCode(charCode);
+            }
+            map.set(curr.toString(16).padStart(hexLen, '0').toLowerCase(), s);
+            curr++;
+          }
+          if (tokens[arrIdx].includes(']')) break;
+          arrIdx++;
+        }
+        i = arrIdx + 1;
+      } else {
+        const targetHex = target.replace(/[<>]/g, '');
+        let targetStart = parseInt(targetHex, 16);
+        for (let code = start; code <= end; code++) {
+          const key = code.toString(16).padStart(hexLen, '0').toLowerCase();
+          map.set(key, String.fromCharCode(targetStart));
+          targetStart++;
+        }
+        i += 3;
+      }
+    }
+  }
+}
+
+/**
+ * Decodifica uma cadeia hexadecimal do PDF utilizando a tabela ToUnicode quando presente,
+ * com fallback para UTF-16BE e ASCII padrão.
+ */
+export function decodificarStringHex(hex: string, cmap?: Map<string, string>): string {
+  const limpo = hex.replace(/\s+/g, '').toLowerCase();
   if (!limpo) return '';
 
-  // Verificar se é UTF-16BE (começa com FEFF ou padrão 00xx)
+  // 1. Tenta decodificar com o mapa ToUnicode da fonte
+  if (cmap && cmap.size > 0) {
+    let resultado = '';
+    let i = 0;
+    let encontrouMapeamento = false;
+
+    while (i < limpo.length) {
+      // Tenta bloco de 4 caracteres hex (glifos de 2 bytes)
+      if (i + 4 <= limpo.length) {
+        const pedaco4 = limpo.substring(i, i + 4);
+        if (cmap.has(pedaco4)) {
+          resultado += cmap.get(pedaco4);
+          i += 4;
+          encontrouMapeamento = true;
+          continue;
+        }
+      }
+      // Tenta bloco de 2 caracteres hex (glifos de 1 byte)
+      if (i + 2 <= limpo.length) {
+        const pedaco2 = limpo.substring(i, i + 2);
+        if (cmap.has(pedaco2)) {
+          resultado += cmap.get(pedaco2);
+          i += 2;
+          encontrouMapeamento = true;
+          continue;
+        }
+      }
+      i += 2;
+    }
+
+    if (encontrouMapeamento && resultado.length > 0) {
+      return resultado;
+    }
+  }
+
+  // 2. Fallback UTF-16BE com BOM
+  if (limpo.startsWith('feff')) {
+    let str = '';
+    for (let i = 4; i < limpo.length; i += 4) {
+      const code = parseInt(limpo.substring(i, i + 4), 16);
+      if (!isNaN(code)) str += String.fromCharCode(code);
+    }
+    return str;
+  }
+
+  // 3. Fallback UTF-16BE sem BOM
   const bytes: number[] = [];
   for (let i = 0; i < limpo.length; i += 2) {
     const byteHex = limpo.substring(i, i + 2);
@@ -41,18 +167,6 @@ export function decodificarStringHexPdf(hex: string): string {
     }
   }
 
-  if (bytes.length >= 2 && bytes[0] === 0xfe && bytes[1] === 0xff) {
-    // UTF-16BE com BOM
-    let str = '';
-    for (let i = 2; i < bytes.length; i += 2) {
-      if (i + 1 < bytes.length) {
-        str += String.fromCharCode((bytes[i] << 8) | bytes[i + 1]);
-      }
-    }
-    return str;
-  }
-
-  // Verificar se a cada 2 bytes o primeiro é 0x00 (UTF-16BE comum em fontes PDF)
   if (bytes.length >= 4 && bytes[0] === 0x00 && bytes[2] === 0x00) {
     let str = '';
     for (let i = 0; i < bytes.length; i += 2) {
@@ -66,21 +180,49 @@ export function decodificarStringHexPdf(hex: string): string {
     return str;
   }
 
-  // Caso padrão: ASCII / Latin-1 hex
-  let resultado = '';
+  // 4. ASCII / Latin-1 padrão
+  let resultadoAscii = '';
   for (const b of bytes) {
     if (b >= 32 || b === 10 || b === 13) {
-      resultado += String.fromCharCode(b);
+      resultadoAscii += String.fromCharCode(b);
     }
   }
-  return resultado;
+  return resultadoAscii;
+}
+
+export const decodificarStringHexPdf = decodificarStringHex;
+
+/**
+ * Decodifica string literal (...) do PDF utilizando ToUnicode ou escapes padrão.
+ */
+export function decodificarStringLiteral(lit: string, cmap?: Map<string, string>): string {
+  // Se houver CMap e a string contiver glifos de 2 bytes não imprimíveis
+  if (cmap && cmap.size > 0 && lit.length >= 2) {
+    let mapeado = '';
+    let encontrouGlifo = false;
+    for (let i = 0; i < lit.length; i += 2) {
+      const b1 = lit.charCodeAt(i).toString(16).padStart(2, '0');
+      const b2 = i + 1 < lit.length ? lit.charCodeAt(i + 1).toString(16).padStart(2, '0') : '';
+      const hex = (b1 + b2).toLowerCase();
+      if (cmap.has(hex)) {
+        mapeado += cmap.get(hex);
+        encontrouGlifo = true;
+      } else {
+        mapeado += lit[i] + (lit[i + 1] || '');
+      }
+    }
+    if (encontrouGlifo && mapeado.length > 0) {
+      return mapeado;
+    }
+  }
+
+  return decodificarEscapesPdf(lit);
 }
 
 /**
- * Converte base64 para Uint8Array de forma segura em qualquer runtime.
+ * Converte base64 para Uint8Array de forma segura.
  */
 export function base64ParaBytes(base64: string): Uint8Array {
-  // Limpar espaços ou cabeçalhos data:application/pdf;base64, se existirem
   const limpo = base64.replace(/^data:application\/pdf;base64,/, '').replace(/\s+/g, '');
   if (typeof atob === 'function') {
     const binario = atob(limpo);
@@ -92,7 +234,6 @@ export function base64ParaBytes(base64: string): Uint8Array {
     return bytes;
   }
 
-  // Fallback puro JS para decodificação base64
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
   const lookup = new Uint8Array(256);
   for (let i = 0; i < chars.length; i++) {
@@ -120,19 +261,33 @@ export function base64ParaBytes(base64: string): Uint8Array {
 }
 
 /**
- * Extrai texto bruto contido em um PDF a partir de seus bytes ou string binária.
+ * Verifica se um texto possui proporção alta de caracteres válidos e legíveis,
+ * descartando ruído binário de fontes compactadas.
  */
-export function extrairTextoDePdf(entrada: string | Uint8Array): string {
+function ehLinhaValida(str: string): boolean {
+  const t = str.trim();
+  if (t.length < 2) return false;
+  // Caracteres comuns em currículos (letras com acentos, números, espaços, pontuação)
+  const letrasENumeros = t.match(/[a-zA-Z0-9À-ÿ]/g);
+  if (!letrasENumeros || letrasENumeros.length < 2) return false;
+  const legiveis = t.match(/[a-zA-Z0-9À-ÿ\s.,;:/\-()@+*#%]/g);
+  if (!legiveis) return false;
+  return legiveis.length / t.length >= 0.7;
+}
+
+/**
+ * Extrai texto bruto contido em um PDF a partir de seus bytes ou string binária.
+ * Processa CMaps ToUnicode e renderiza blocos BT ... ET de forma padrão.
+ */
+export async function extrairTextoDePdf(entrada: string | Uint8Array): Promise<string> {
   let bytes: Uint8Array;
   if (typeof entrada === 'string') {
-    // Se a string contiver cabeçalho %PDF-, é uma string binária latin1
     if (entrada.startsWith('%PDF-') || entrada.includes('%PDF-')) {
       bytes = new Uint8Array(entrada.length);
       for (let i = 0; i < entrada.length; i++) {
         bytes[i] = entrada.charCodeAt(i) & 0xff;
       }
     } else {
-      // Caso contrário, é uma string codificada em base64
       bytes = base64ParaBytes(entrada);
     }
   } else {
@@ -143,7 +298,7 @@ export function extrairTextoDePdf(entrada: string | Uint8Array): string {
     return '';
   }
 
-  // Converter bytes para string latin1 para busca de marcadores PDF
+  // Converter bytes para string binária (latin1)
   let pdfString = '';
   const tamanhoChunk = 8192;
   for (let i = 0; i < bytes.length; i += tamanhoChunk) {
@@ -151,17 +306,32 @@ export function extrairTextoDePdf(entrada: string | Uint8Array): string {
     pdfString += String.fromCharCode.apply(null, Array.from(pedaco));
   }
 
-  const linhasExtraidas: string[] = [];
-
-  // 1. Procurar por streams (comprimidos ou descomprimidos)
-  const streamRegex = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
+  // 1. Localizar streams e mapear tabelas /ToUnicode
+  const cmapMap = new Map<string, string>();
+  const streamRegex = /(?:<<([\s\S]*?)>>\s*)?stream\r?\n([\s\S]*?)\r?\n?endstream/g;
   let match: RegExpExecArray | null;
 
-  while ((match = streamRegex.exec(pdfString)) !== null) {
-    const rawStream = match[1];
-    let decompressed = '';
+  const streamsDeConteudo: string[] = [];
 
-    // Tentar descomprimir com unzlib (FlateDecode)
+  while ((match = streamRegex.exec(pdfString)) !== null) {
+    const headerDict = match[1] || '';
+    const rawStream = match[2];
+
+    // Ignorar streams binárias de fontes, imagens e tabelas de índice
+    if (
+      headerDict.includes('/FontFile') ||
+      headerDict.includes('/Subtype /Image') ||
+      headerDict.includes('/Subtype/Image') ||
+      headerDict.includes('/Filter /DCTDecode') ||
+      headerDict.includes('/Filter/DCTDecode') ||
+      headerDict.includes('/Type /ObjStm') ||
+      headerDict.includes('/Type/ObjStm') ||
+      headerDict.includes('/Type /XRef')
+    ) {
+      continue;
+    }
+
+    let decompressed = '';
     try {
       const streamBytes = new Uint8Array(rawStream.length);
       for (let i = 0; i < rawStream.length; i++) {
@@ -178,89 +348,95 @@ export function extrairTextoDePdf(entrada: string | Uint8Array): string {
         decompressed = String.fromCharCode.apply(null, Array.from(uncompressedBytes));
       }
     } catch {
-      // Se não estiver comprimido ou der erro, usa a stream original
-      decompressed = rawStream;
+      // Tentar descompressão raw inflate se zlib falhar
+      try {
+        const streamBytes = new Uint8Array(rawStream.length);
+        for (let i = 0; i < rawStream.length; i++) {
+          streamBytes[i] = rawStream.charCodeAt(i) & 0xff;
+        }
+        const uncompressedBytes = fflate.inflateSync(streamBytes);
+        decompressed = String.fromCharCode.apply(null, Array.from(uncompressedBytes));
+      } catch {
+        decompressed = rawStream;
+      }
     }
 
-    // 2. Extrair blocos de texto (BT ... ET)
+    // Se for uma tabela ToUnicode, processa os mapeamentos de glifos
+    if (
+      decompressed.includes('begincmap') ||
+      decompressed.includes('beginbfchar') ||
+      decompressed.includes('beginbfrange')
+    ) {
+      processarCMapToUnicode(decompressed, cmapMap);
+    } else if (decompressed.includes('BT') && decompressed.includes('ET')) {
+      streamsDeConteudo.push(decompressed);
+    }
+  }
+
+  // 2. Extrair blocos de texto BT ... ET dos fluxos de página
+  const linhasExtraidas: string[] = [];
+
+  for (const streamConteudo of streamsDeConteudo) {
     const btRegex = /BT[\s\S]*?ET/g;
     let btMatch: RegExpExecArray | null;
 
-    while ((btMatch = btRegex.exec(decompressed)) !== null) {
+    while ((btMatch = btRegex.exec(streamConteudo)) !== null) {
       const btBlock = btMatch[0];
+      const blocoPartes: string[] = [];
 
-      // Operador Tj, ' ou ": (texto) Tj
-      const tjLiteralRegex = /\((?:\\\(|\\\)|[^)])*\)\s*(?:Tj|'|")/g;
-      let tjMatch: RegExpExecArray | null;
-      while ((tjMatch = tjLiteralRegex.exec(btBlock)) !== null) {
-        let texto = tjMatch[0].replace(/\s*(?:Tj|'|")$/, '');
-        texto = texto.slice(1, -1);
-        const decodificado = decodificarEscapesPdf(texto).trim();
-        if (decodificado.length > 0) {
-          linhasExtraidas.push(decodificado);
+      // Identifica comandos Tj, ', " e TJ
+      const opRegex =
+        /\((?:\\\(|\\\)|[^)])*\)\s*(?:Tj|'|")|<([0-9a-fA-F\s]+)>\s*(?:Tj|'|")|\[([\s\S]*?)\]\s*TJ/g;
+      let opMatch: RegExpExecArray | null;
+
+      while ((opMatch = opRegex.exec(btBlock)) !== null) {
+        const full = opMatch[0];
+
+        // 1. Literal: (texto) Tj
+        if (full.startsWith('(')) {
+          const raw = full.slice(1, full.lastIndexOf(')'));
+          const dec = decodificarStringLiteral(raw, cmapMap).trim();
+          if (dec.length > 0) blocoPartes.push(dec);
         }
-      }
-
-      // Operador Tj com hexadecimal: <48656c6c6f> Tj
-      const tjHexRegex = /<([0-9a-fA-F\s]+)>\s*(?:Tj|'|")/g;
-      let tjHexMatch: RegExpExecArray | null;
-      while ((tjHexMatch = tjHexRegex.exec(btBlock)) !== null) {
-        const hex = tjHexMatch[1];
-        const decodificado = decodificarStringHexPdf(hex).trim();
-        if (decodificado.length > 0) {
-          linhasExtraidas.push(decodificado);
+        // 2. Hexadecimal: <hex> Tj
+        else if (full.startsWith('<')) {
+          const hex = opMatch[1];
+          const dec = decodificarStringHex(hex, cmapMap).trim();
+          if (dec.length > 0) blocoPartes.push(dec);
         }
-      }
+        // 3. Array com espaçamento: [(...) 10 <...>] TJ
+        else if (full.startsWith('[')) {
+          const arrayConteudo = opMatch[2];
+          const tokenRegex = /\((?:\\\(|\\\)|[^)])*\)|<([0-9a-fA-F\s]+)>/g;
+          let tokMatch: RegExpExecArray | null;
+          const linhaPartes: string[] = [];
 
-      // Operador TJ com array: [(parte 1) -10 (parte 2)] TJ ou [<hex1> 10 <hex2>] TJ
-      const tjArrayRegex = /\[([\s\S]*?)\]\s*TJ/g;
-      let arrayMatch: RegExpExecArray | null;
-      while ((arrayMatch = tjArrayRegex.exec(btBlock)) !== null) {
-        const conteudoArray = arrayMatch[1];
-        const partesLinha: string[] = [];
+          while ((tokMatch = tokenRegex.exec(arrayConteudo)) !== null) {
+            const tok = tokMatch[0];
+            if (tok.startsWith('(')) {
+              const raw = tok.slice(1, -1);
+              const dec = decodificarStringLiteral(raw, cmapMap);
+              if (dec) linhaPartes.push(dec);
+            } else if (tok.startsWith('<')) {
+              const hex = tokMatch[1] || tok.slice(1, -1);
+              const dec = decodificarStringHex(hex, cmapMap);
+              if (dec) linhaPartes.push(dec);
+            }
+          }
 
-        // Buscar tanto (strings) quanto <hex> dentro do array
-        const tokenRegex = /\((?:\\\(|\\\)|[^)])*\)|<([0-9a-fA-F\s]+)>/g;
-        let tokenMatch: RegExpExecArray | null;
-        while ((tokenMatch = tokenRegex.exec(conteudoArray)) !== null) {
-          const item = tokenMatch[0];
-          if (item.startsWith('(')) {
-            const raw = item.slice(1, -1);
-            partesLinha.push(decodificarEscapesPdf(raw));
-          } else if (item.startsWith('<')) {
-            const hex = tokenMatch[1] || item.slice(1, -1);
-            partesLinha.push(decodificarStringHexPdf(hex));
+          const montada = linhaPartes.join(' ').replace(/\s+/g, ' ').trim();
+          if (montada.length > 0) {
+            blocoPartes.push(montada);
           }
         }
+      }
 
-        const linhaMontada = partesLinha.join(' ').replace(/\s+/g, ' ').trim();
-        if (linhaMontada.length > 0) {
-          linhasExtraidas.push(linhaMontada);
-        }
+      const linhaFinal = blocoPartes.join(' ').replace(/\s+/g, ' ').trim();
+      if (linhaFinal.length > 0 && ehLinhaValida(linhaFinal)) {
+        linhasExtraidas.push(linhaFinal);
       }
     }
   }
 
-  // Fallback caso não tenha encontrado blocos BT ... ET padrão
-  if (linhasExtraidas.length === 0) {
-    const parenteseRegex = /\((?:\\\(|\\\)|[^)])*\)/g;
-    let pMatch: RegExpExecArray | null;
-    while ((pMatch = parenteseRegex.exec(pdfString)) !== null) {
-      const conteudo = pMatch[0].slice(1, -1);
-      if (conteudo.length >= 3 && /[a-zA-ZÀ-ÿ]/.test(conteudo)) {
-        const decod = decodificarEscapesPdf(conteudo).trim();
-        if (decod.length > 0 && !decod.includes('%PDF') && !decod.includes('Font')) {
-          linhasExtraidas.push(decod);
-        }
-      }
-    }
-  }
-
-  // Filtrar e organizar linhas
-  const textoFinal = linhasExtraidas
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0)
-    .join('\n');
-
-  return textoFinal;
+  return linhasExtraidas.join('\n');
 }

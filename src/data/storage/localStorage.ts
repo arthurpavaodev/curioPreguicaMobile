@@ -139,7 +139,7 @@ export async function importarArquivoPdf(): Promise<ResultadoImportacaoPdf | nul
     }
 
     const dados = await lerDadosDoArquivo(fileUri);
-    const textoExtraido = extrairTextoDePdf(dados);
+    const textoExtraido = await extrairTextoDePdf(dados);
 
     return {
       texto: textoExtraido,
