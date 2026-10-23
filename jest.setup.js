@@ -7,3 +7,15 @@ jest.mock('expo-font', () => ({
   isLoaded: () => true,
   loadAsync: jest.fn().mockResolvedValue(true),
 }));
+
+jest.mock('@dariyd/react-native-text-recognition', () => ({
+  __esModule: true,
+  default: {
+    recognizeText: jest.fn().mockResolvedValue({ success: false }),
+    isAvailable: jest.fn().mockResolvedValue(false),
+    detectText: jest.fn().mockResolvedValue({ success: false }),
+  },
+  recognizeText: jest.fn().mockResolvedValue({ success: false }),
+  isAvailable: jest.fn().mockResolvedValue(false),
+  detectText: jest.fn().mockResolvedValue({ success: false }),
+}));

@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
 import * as FileSystemLegacy from 'expo-file-system/legacy';
+import { extrairTextoCompletoPdf } from '../../domain/nativeOcrExtractor';
 import { extrairTextoDePdf } from '../../domain/pdfExtractor';
 
 export const STORAGE_KEYS = {
@@ -57,6 +58,8 @@ export interface ResultadoImportacaoPdf {
   texto: string;
   nomeArquivo: string;
   tamanhoBytes?: number;
+  metodo?: 'native-ocr' | 'digital' | 'cloud-ocr' | 'nenhum';
+  origem?: string;
 }
 
 /**
@@ -139,12 +142,14 @@ export async function importarArquivoPdf(): Promise<ResultadoImportacaoPdf | nul
     }
 
     const dados = await lerDadosDoArquivo(fileUri);
-    const textoExtraido = await extrairTextoDePdf(dados);
+    const resultado = await extrairTextoCompletoPdf(fileUri, dados);
 
     return {
-      texto: textoExtraido,
+      texto: resultado.texto,
       nomeArquivo,
       tamanhoBytes,
+      metodo: resultado.metodo,
+      origem: resultado.origem,
     };
   } catch (error) {
     console.warn('Erro ao ler e extrair arquivo PDF de currículo:', error);

@@ -341,6 +341,12 @@ export function AppDataProvider({ repositories, children }: AppDataProviderProps
       setSalvandoCurriculo(true);
       const resultado = await pdfReader();
       if (resultado && resultado.texto !== null) {
+        if (!resultado.texto.trim()) {
+          setErro(
+            'Não foi possível identificar texto legível neste PDF. Verifique se o arquivo não está corrompido ou protegido por senha.',
+          );
+          return false;
+        }
         setTextoCurriculo(resultado.texto);
         textoPendenteRef.current = resultado.texto;
         const salvo = await curriculumRepo.salvarTexto(
