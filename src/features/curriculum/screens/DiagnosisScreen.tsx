@@ -37,7 +37,6 @@ export function DiagnosisScreen({
     vagasVisiveis,
     vagaSelecionada,
     diagnosticoAtual,
-    planoAtual,
     textoCurriculo,
     carregando,
     selecionarVaga,
@@ -60,7 +59,7 @@ export function DiagnosisScreen({
       <View style={[styles.container, { backgroundColor: cores.fundo, padding: spacing.lg }]}>
         <EmptyState
           titulo="Nenhum diagnóstico disponível"
-          mensagem="Selecione uma vaga para visualizar a análise detalhada do seu currículo."
+          mensagem="Selecione uma vaga para visualizar a análise do seu currículo."
         />
       </View>
     );
@@ -73,45 +72,23 @@ export function DiagnosisScreen({
     requisitosAtendidosCount,
     requisitosAtendidos,
     requisitosFaltantes,
-    pontosFortes,
     pontosFracos,
     ortografia,
   } = diagnosticoAtual;
 
   const curriculoVazio = textoCurriculo.trim().length === 0;
-  const pendentesNoPlano = planoAtual
-    ? planoAtual.totalEtapas - planoAtual.concluidasCount
-    : 0;
 
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: cores.fundo }]}
       contentContainerStyle={styles.contentContainer}
     >
-      {/* Cabeçalho Centralizado Estilo CREA-MA */}
-      <View style={{ alignItems: 'center', marginBottom: spacing.md }}>
-        <Text
-          style={{
-            fontFamily: fontNames.plexSans600,
-            fontSize: 11,
-            letterSpacing: 1,
-            fontWeight: '700',
-            textTransform: 'uppercase',
-            color: cores.destaque,
-            marginBottom: 4,
-          }}
-        >
-          TRIAGEM E COMPATIBILIDADE
+      <View style={styles.headerBlock}>
+        <Text style={[tipografia.tituloTela, { color: cores.tinta }]}>
+          Diagnóstico
         </Text>
-        <Text
-          style={[
-            tipografia.tituloTela,
-            { color: cores.tinta, textAlign: 'center' },
-          ]}
-        >
-          Diagnóstico{' '}
-          <Text style={{ color: cores.laranjaDestaque }}>detalhado</Text>
-          {'\n'}do seu perfil!
+        <Text style={[tipografia.apoio, { color: cores.textoSecundario, marginTop: 2 }]}>
+          Veja o que você já atende e o que falta para a vaga selecionada.
         </Text>
       </View>
 
@@ -124,12 +101,12 @@ export function DiagnosisScreen({
       {curriculoVazio ? (
         <NoticeBanner
           tipo="atencao"
-          titulo="Seu currículo está vazio"
-          mensagem="Cole seu currículo na aba 'Currículo' para identificar quais requisitos desta vaga você já atende."
+          titulo="Currículo vazio"
+          mensagem="Importe ou preencha seu currículo na aba 'Currículo' para calcular sua aderência."
         />
       ) : null}
 
-      {/* Card Principal: Nota de Aderência em Destaque + Botão Pílula Gupy */}
+      {/* Card Principal: Compatibilidade + Ações Diretas */}
       <Card>
         <AdherenceMeter
           aderencia={aderencia}
@@ -140,61 +117,23 @@ export function DiagnosisScreen({
 
         <View style={[styles.ctaRow, { borderTopColor: cores.linha }]}>
           {curriculoVazio ? (
-            <Pressable onPress={onNavegarParaCurriculo}>
-              <Text style={[tipografia.textoDestaque, { color: cores.destaque }]}>
-                Preencher Currículo
-              </Text>
-            </Pressable>
-          ) : (
-            <Text style={[tipografia.apoio, { color: cores.textoSecundario }]}>
-              {pendentesNoPlano} etapas recomendadas
-            </Text>
-          )}
-
-          <Button
-            titulo={
-              pendentesNoPlano > 0
-                ? 'Gerar Plano de Melhoria →'
-                : 'Abrir Plano de Voo →'
-            }
-            onPress={onNavegarParaPlano}
-            variante="primario"
-            compacto
-          />
-        </View>
-
-        {/* Linha de Ação: Candidatar-se à Vaga */}
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            borderTopWidth: 1,
-            borderTopColor: cores.linha,
-            paddingTop: spacing.sm,
-            marginTop: spacing.sm,
-          }}
-        >
-          <View style={{ flex: 1, marginRight: spacing.sm }}>
-            <Text style={[tipografia.textoDestaque, { color: cores.tinta }]}>
-              Interessado na oportunidade?
-            </Text>
-            <Text style={[tipografia.apoio, { color: cores.textoSecundario }]}>
-              Envie sua candidatura para o painel da empresa e TEIA.
-            </Text>
-          </View>
-
-          {jaCandidatouNaVaga(vagaSelecionada.id) ? (
-            <Badge rotulo="Inscrição Confirmada ✓" variante="ok" />
+            <Button
+              titulo="Preencher Currículo"
+              onPress={onNavegarParaCurriculo}
+              variante="padrao"
+              compacto
+            />
+          ) : jaCandidatouNaVaga(vagaSelecionada.id) ? (
+            <Badge rotulo="Inscrito na vaga ✓" variante="ok" />
           ) : (
             <Button
-              titulo="Candidatar-se  ↗"
+              titulo="Candidatar-se"
               onPress={async () => {
                 const ok = await candidatarVaga(vagaSelecionada.id);
                 if (ok) {
                   Alert.alert(
                     'Candidatura Confirmada!',
-                    `Você se candidatou para "${vagaSelecionada.titulo}". Seu perfil e compatibilidade já estão visíveis para os recrutadores.`,
+                    `Você se candidatou para "${vagaSelecionada.titulo}".`,
                   );
                 }
               }}
@@ -202,49 +141,25 @@ export function DiagnosisScreen({
               compacto
             />
           )}
+
+          <Button
+            titulo="Plano de Voo →"
+            onPress={onNavegarParaPlano}
+            variante="primario"
+            compacto
+          />
         </View>
       </Card>
 
-      {/* Card de Palavras-Chave do PDF */}
-      {diagnosticoAtual.palavrasChave && diagnosticoAtual.palavrasChave.length > 0 && (
-        <Card>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <Text style={[tipografia.rotulo, { color: cores.destaque }]}>
-              PALAVRAS-CHAVE DA VAGA ({diagnosticoAtual.palavrasAtendidas?.length || 0} de {diagnosticoAtual.palavrasChave.length} no seu PDF)
-            </Text>
-          </View>
-          <Text style={[tipografia.apoio, { color: cores.textoSecundario, marginBottom: 10 }]}>
-            Comparação direta entre o texto extraído do seu currículo em PDF e os termos definidos pela empresa.
-          </Text>
-
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-            {diagnosticoAtual.palavrasAtendidas?.map((kw, i) => (
-              <Badge key={`kw_at_${i}`} rotulo={`✓ ${kw}`} variante="ok" />
-            ))}
-            {diagnosticoAtual.palavrasFaltantes?.map((kw, i) => (
-              <Badge key={`kw_ft_${i}`} rotulo={`Falta: ${kw}`} variante="atencao" />
-            ))}
-          </View>
-        </Card>
-      )}
-
-      {aderencia === null ? (
-        <NoticeBanner
-          tipo="atencao"
-          titulo="Sem requisitos reconhecidos nesta vaga"
-          mensagem="A descrição informada não contém competências do catálogo nem itens de requisito claros para cálculo da porcentagem."
-        />
-      ) : null}
-
-      {/* Abas com Sublinhado Azul Elétrico Estilo Gupy */}
+      {/* Abas de Detalhamento */}
       <View style={[styles.underlineTabs, { borderBottomColor: cores.linha }]}>
         {(
           [
-            { id: 'pendentes', rotulo: `Pendentes (${requisitosFaltantes.length})` },
+            { id: 'pendentes', rotulo: `Faltam (${requisitosFaltantes.length})` },
             { id: 'atendidos', rotulo: `Atendidos (${requisitosAtendidos.length})` },
             {
               id: 'estrutura',
-              rotulo: `Currículo & Escrita (${pontosFracos.length + ortografia.length})`,
+              rotulo: `Revisão CV (${pontosFracos.length + ortografia.length})`,
             },
           ] as { id: AbaDiagnostico; rotulo: string }[]
         ).map((tab) => {
@@ -277,13 +192,12 @@ export function DiagnosisScreen({
         })}
       </View>
 
-      {/* Conteúdo da Aba Selecionada (Lista Compacta) */}
       {abaAtiva === 'pendentes' ? (
         <Card semPadding>
           {requisitosFaltantes.length === 0 ? (
             <View style={styles.emptySectionRow}>
               <Text style={[tipografia.textoMedio, { color: cores.ok }]}>
-                ✓ Parabéns! Todos os requisitos identificados nesta vaga constam no seu currículo.
+                ✓ Todos os requisitos desta vaga constam no seu currículo!
               </Text>
             </View>
           ) : (
@@ -302,12 +216,11 @@ export function DiagnosisScreen({
                       {item.requisito.rotulo}
                     </Text>
                     <Badge
-                      rotulo={item.obrigatorio ? 'obrigatório · peso 2' : 'diferencial · peso 1'}
+                      rotulo={item.obrigatorio ? 'Obrigatório' : 'Diferencial'}
                       variante={item.obrigatorio ? 'erro' : 'atencao'}
                     />
                   </View>
                   <Text style={[tipografia.apoio, { color: cores.textoSecundario, marginTop: 4 }]}>
-                    <Text style={{ fontWeight: '600', color: cores.tinta }}>Recomendação: </Text>
                     {item.acaoSugerida}
                   </Text>
                 </View>
@@ -322,7 +235,7 @@ export function DiagnosisScreen({
           {requisitosAtendidos.length === 0 ? (
             <View style={styles.emptySectionRow}>
               <Text style={[tipografia.apoio, { color: cores.textoSecundario }]}>
-                Nenhum requisito desta vaga foi encontrado no texto atual do currículo.
+                Nenhum requisito desta vaga foi identificado no currículo atual.
               </Text>
             </View>
           ) : (
@@ -340,18 +253,8 @@ export function DiagnosisScreen({
                     <Text style={[tipografia.textoDestaque, { color: cores.tinta, flex: 1 }]}>
                       ✓ {item.requisito.rotulo}
                     </Text>
-                    <Badge rotulo="atendido" variante="ok" />
+                    <Badge rotulo="Atendido" variante="ok" />
                   </View>
-                  {item.evidencia ? (
-                    <Text
-                      style={[
-                        tipografia.apoio,
-                        { color: cores.textoSecundario, fontStyle: 'italic', marginTop: 4 },
-                      ]}
-                    >
-                      Evidência extraída: "{item.evidencia}"
-                    </Text>
-                  ) : null}
                 </View>
               );
             })
@@ -361,80 +264,34 @@ export function DiagnosisScreen({
 
       {abaAtiva === 'estrutura' ? (
         <Card semPadding>
-          <View
-            style={[
-              styles.compactRow,
-              { borderBottomWidth: 1, borderBottomColor: cores.linha },
-            ]}
-          >
-            <View style={styles.compactRowHeader}>
-              <Text style={[tipografia.rotulo, { color: cores.textoSecundario }]}>
-                ORTOGRAFIA E ACENTUAÇÃO
+          {ortografia.length === 0 && pontosFracos.length === 0 ? (
+            <View style={styles.emptySectionRow}>
+              <Text style={[tipografia.apoio, { color: cores.ok }]}>
+                ✓ Estrutura completa e sem alertas ortográficos.
               </Text>
-              <Badge
-                rotulo={
-                  ortografia.length === 0
-                    ? 'Sem alertas'
-                    : `${ortografia.length} revisão(ões)`
-                }
-                variante={ortografia.length === 0 ? 'ok' : 'erro'}
-              />
             </View>
-
-            {ortografia.length === 0 ? (
-              <Text style={[tipografia.apoio, { color: cores.ok, marginTop: 4 }]}>
-                Nenhuma palavra sem acento ou repetida em sequência foi detectada.
-              </Text>
-            ) : (
-              <View style={{ marginTop: 6, gap: 4 }}>
-                {ortografia.map((item, idx) => (
-                  <Text key={`orto_${idx}`} style={[tipografia.apoio, { color: cores.tinta }]}>
-                    <Text style={{ color: cores.erro, fontWeight: '700' }}>! </Text>
-                    {item.rotulo}
-                  </Text>
-                ))}
-              </View>
-            )}
-          </View>
-
-          {pontosFracos.length > 0 ? (
-            <View
-              style={[
-                styles.compactRow,
-                pontosFortes.length > 0 && { borderBottomWidth: 1, borderBottomColor: cores.linha },
-              ]}
-            >
-              <Text style={[tipografia.rotulo, { color: cores.textoSecundario, marginBottom: 6 }]}>
-                PONTOS A MELHORAR ({pontosFracos.length})
-              </Text>
+          ) : (
+            <View style={styles.compactRow}>
+              {ortografia.map((item, idx) => (
+                <Text
+                  key={`orto_${idx}`}
+                  style={[tipografia.apoio, { color: cores.tinta, marginVertical: 3 }]}
+                >
+                  <Text style={{ color: cores.erro, fontWeight: '700' }}>! </Text>
+                  {item.rotulo}
+                </Text>
+              ))}
               {pontosFracos.map((pf, idx) => (
                 <Text
                   key={`pfr_${idx}`}
-                  style={[tipografia.apoio, { color: cores.tinta, marginVertical: 2 }]}
+                  style={[tipografia.apoio, { color: cores.tinta, marginVertical: 3 }]}
                 >
                   <Text style={{ color: cores.atencao, fontWeight: '700' }}>• </Text>
                   {pf}
                 </Text>
               ))}
             </View>
-          ) : null}
-
-          {pontosFortes.length > 0 ? (
-            <View style={styles.compactRow}>
-              <Text style={[tipografia.rotulo, { color: cores.textoSecundario, marginBottom: 6 }]}>
-                PONTOS FORTES IDENTIFICADOS ({pontosFortes.length})
-              </Text>
-              {pontosFortes.map((pf, idx) => (
-                <Text
-                  key={`pf_${idx}`}
-                  style={[tipografia.apoio, { color: cores.tinta, marginVertical: 2 }]}
-                >
-                  <Text style={{ color: cores.ok, fontWeight: '700' }}>✓ </Text>
-                  {pf}
-                </Text>
-              ))}
-            </View>
-          ) : null}
+          )}
         </Card>
       ) : null}
     </ScrollView>
@@ -447,19 +304,22 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: spacing.lg,
-    paddingBottom: 40,
+    paddingBottom: 36,
   },
   centralizado: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  headerBlock: {
+    marginBottom: spacing.md,
+  },
   ctaRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderTopWidth: 1,
-    paddingTop: spacing.md,
+    paddingTop: spacing.sm,
     marginTop: spacing.md,
   },
   underlineTabs: {

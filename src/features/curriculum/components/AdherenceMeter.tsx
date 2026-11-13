@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../../../app/providers/ThemeProvider';
 import { Badge, ProgressBar } from '../../../components';
-import { radius, spacing, tipografia } from '../../../theme';
+import { spacing, tipografia } from '../../../theme';
 
 export interface AdherenceMeterProps {
   aderencia: number | null;
@@ -38,7 +38,7 @@ export function AdherenceMeter({
       <View style={styles.topRow}>
         <View style={styles.scoreBlock}>
           <Text style={[tipografia.rotulo, { color: cores.textoSecundario }]}>
-            ESTIMATIVA DE COMPATIBILIDADE
+            COMPATIBILIDADE
           </Text>
           <View style={styles.scoreValueRow}>
             <Text style={[tipografia.monoDestaque, { color: getCor() }]}>
@@ -65,25 +65,9 @@ export function AdherenceMeter({
       <ProgressBar
         progresso={aderencia ?? 0}
         cor={getCor()}
-        altura={10}
-        style={{ marginTop: spacing.sm, marginBottom: spacing.sm }}
+        altura={8}
+        style={{ marginTop: spacing.sm }}
       />
-
-      <View
-        style={[
-          styles.academicNote,
-          {
-            backgroundColor: cores.superficieSecundaria,
-            borderColor: cores.linha,
-          },
-        ]}
-      >
-        <Text style={[tipografia.apoio, { color: cores.textoSecundario }]}>
-          Nota calculada de forma ponderada sobre os requisitos identificados na vaga (peso 2 para
-          obrigatórios e peso 1 para diferenciais). Trata-se de uma estimativa de aderência textual,
-          e não uma probabilidade de contratação.
-        </Text>
-      </View>
     </View>
   );
 }
@@ -104,16 +88,10 @@ const styles = StyleSheet.create({
   scoreValueRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: 2,
     flexWrap: 'wrap',
   },
   counterBox: {
     alignItems: 'flex-end',
-  },
-  academicNote: {
-    marginTop: 4,
-    padding: spacing.sm,
-    borderRadius: radius.sm,
-    borderWidth: 1,
   },
 });

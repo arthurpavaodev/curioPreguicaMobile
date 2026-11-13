@@ -15,7 +15,6 @@ import {
   Card,
   ErrorState,
   Input,
-  NoticeBanner,
 } from '../../../components';
 import { spacing, tipografia } from '../../../theme';
 
@@ -79,85 +78,67 @@ export function CompanyJobsScreen({ onVerCandidatosVaga }: CompanyJobsScreenProp
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={
           <View style={styles.header}>
-            <Text style={[tipografia.tituloTela, { color: cores.tinta }]}>
-              Vagas da Empresa
-            </Text>
-            <Text style={[tipografia.apoio, { color: cores.textoSecundario, marginTop: 2, marginBottom: 12 }]}>
-              Publique oportunidades e avalie quais estudantes atendem aos requisitos.
-            </Text>
+            <View style={styles.topHeaderRow}>
+              <View style={{ flex: 1, marginRight: spacing.sm }}>
+                <Text style={[tipografia.tituloTela, { color: cores.tinta }]}>
+                  Minhas Vagas
+                </Text>
+                <Text style={[tipografia.apoio, { color: cores.textoSecundario, marginTop: 2 }]}>
+                  Gerencie suas oportunidades e veja os candidatos compatíveis.
+                </Text>
+              </View>
 
-            <NoticeBanner
-              tipo="info"
-              titulo="Ambiente local de demonstração"
-              mensagem="As vagas publicadas aqui ficam salvas neste dispositivo e ficam imediatamente visíveis nos perfis Aluno e TEIA."
-            />
+              <Button
+                titulo={formAberto ? 'Fechar' : '+ Nova vaga'}
+                onPress={() => setFormAberto(!formAberto)}
+                variante={formAberto ? 'padrao' : 'primario'}
+                compacto
+              />
+            </View>
 
             {erro ? <ErrorState mensagem={erro} /> : null}
 
-            {/* Formulário Nova Vaga */}
-            <Card style={styles.formCard}>
-              <Pressable
-                onPress={() => setFormAberto(!formAberto)}
-                style={styles.toggleFormHeader}
-                accessibilityRole="button"
-                accessibilityLabel={formAberto ? 'Fechar formulário de nova vaga' : 'Publicar nova vaga'}
-              >
-                <Text style={[tipografia.textoDestaque, { color: cores.destaque }]}>
-                  {formAberto ? '▲ Fechar formulário' : '+ Publicar nova vaga'}
-                </Text>
-              </Pressable>
+            {formAberto ? (
+              <Card style={styles.formCard}>
+                <Input
+                  rotulo="TÍTULO DA VAGA"
+                  placeholder="Ex: Desenvolvedor Mobile Júnior"
+                  value={titulo}
+                  onChangeText={setTitulo}
+                />
 
-              {formAberto ? (
-                <View style={styles.formBody}>
-                  <Input
-                    rotulo="TÍTULO DA VAGA"
-                    placeholder="Ex: Desenvolvedor Mobile Júnior"
-                    value={titulo}
-                    onChangeText={setTitulo}
-                  />
+                <Input
+                  rotulo="EMPRESA"
+                  placeholder="Ex: Minha Empresa Tech"
+                  value={empresa}
+                  onChangeText={setEmpresa}
+                />
 
-                  <Input
-                    rotulo="NOME DA EMPRESA"
-                    placeholder="Ex: Minha Empresa Tech"
-                    value={empresa}
-                    onChangeText={setEmpresa}
-                  />
+                <Input
+                  rotulo="PALAVRAS-CHAVE (OPCIONAL, SEPARADAS POR VÍRGULA)"
+                  placeholder="Ex: React Native, TypeScript, Git, SQL"
+                  value={palavrasChaveTexto}
+                  onChangeText={setPalavrasChaveTexto}
+                />
 
-                  <Input
-                    rotulo="PALAVRAS-CHAVE DA VAGA (SEPARADAS POR VÍRGULA)"
-                    placeholder="Ex: React Native, TypeScript, Git, SQL, Firebase"
-                    value={palavrasChaveTexto}
-                    onChangeText={setPalavrasChaveTexto}
-                  />
+                <Input
+                  rotulo="DESCRIÇÃO E REQUISITOS"
+                  placeholder="Liste os requisitos obrigatórios e diferenciais..."
+                  multiline
+                  value={descricao}
+                  onChangeText={setDescricao}
+                  inputStyle={{ minHeight: 90 }}
+                  erro={erroForm || undefined}
+                />
 
-                  <Input
-                    rotulo="DESCRIÇÃO E REQUISITOS"
-                    placeholder="Liste os requisitos obrigatórios e diferenciais..."
-                    multiline
-                    value={descricao}
-                    onChangeText={setDescricao}
-                    inputStyle={{ minHeight: 110 }}
-                    erro={erroForm || undefined}
-                  />
-
-                  <Button
-                    titulo="Publicar vaga"
-                    onPress={handleCadastrarVaga}
-                    variante="primario"
-                    carregando={cadastrando}
-                  />
-                </View>
-              ) : null}
-            </Card>
-
-            <View style={styles.secaoTituloRow}>
-              <Text style={[tipografia.secao, { color: cores.tinta }]}>
-                Vagas Publicadas
-              </Text>
-              <Text style={[tipografia.apoio, { color: cores.textoSecundario }]}>
-                {vagasVisiveis.length} {vagasVisiveis.length === 1 ? 'vaga' : 'vagas'}
-              </Text>
-            </View>
+                <Button
+                  titulo="Publicar vaga →"
+                  onPress={handleCadastrarVaga}
+                  variante="primario"
+                  carregando={cadastrando}
+                />
+              </Card>
+            ) : null}
           </View>
         }
         renderItem={({ item }) => (
@@ -168,50 +149,39 @@ export function CompanyJobsScreen({ onVerCandidatosVaga }: CompanyJobsScreenProp
                   {item.titulo}
                 </Text>
                 <Text style={[tipografia.apoio, { color: cores.textoSecundario, marginTop: 2 }]}>
-                  {item.empresa} · {item.palavrasChave?.length || item.requisitos.length} palavras-chave
+                  {item.empresa} · {item.requisitos.length} requisitos mapeados
                 </Text>
               </View>
 
               <Badge
-                rotulo={item.origem === 'exemplo' ? 'exemplo' : 'sua empresa'}
+                rotulo={item.origem === 'exemplo' ? 'Exemplo' : 'Ativa'}
                 variante={item.origem === 'exemplo' ? 'padrao' : 'ok'}
               />
             </View>
 
-            {item.palavrasChave && item.palavrasChave.length > 0 && (
-              <View style={styles.keywordChipsRow}>
-                {item.palavrasChave.slice(0, 6).map((kw, i) => (
-                  <Badge key={i} rotulo={kw} variante="padrao" />
-                ))}
-                {item.palavrasChave.length > 6 && (
-                  <Text style={[tipografia.apoio, { color: cores.textoSecundario, alignSelf: 'center' }]}>
-                    +{item.palavrasChave.length - 6}
-                  </Text>
-                )}
-              </View>
-            )}
-
             <View style={[styles.cardActions, { borderTopColor: cores.linha }]}>
-              <View style={{ flexDirection: 'row', gap: spacing.xs, marginLeft: 'auto' }}>
-                {item.origem !== 'exemplo' ? (
-                  <Button
-                    titulo="Remover"
-                    onPress={() => confirmarRemocao(item.id, item.titulo)}
-                    variante="fantasma"
-                    compacto
-                  />
-                ) : null}
+              {item.origem !== 'exemplo' ? (
+                <Pressable
+                  onPress={() => confirmarRemocao(item.id, item.titulo)}
+                  hitSlop={8}
+                >
+                  <Text style={[tipografia.apoio, { color: cores.erro, fontWeight: '600' }]}>
+                    Remover
+                  </Text>
+                </Pressable>
+              ) : (
+                <View />
+              )}
 
-                <Button
-                  titulo="Ver candidatos"
-                  onPress={async () => {
-                    await selecionarVaga(item.id);
-                    onVerCandidatosVaga(item.id);
-                  }}
-                  variante="primario"
-                  compacto
-                />
-              </View>
+              <Button
+                titulo="Ver candidatos →"
+                onPress={async () => {
+                  await selecionarVaga(item.id);
+                  onVerCandidatosVaga(item.id);
+                }}
+                variante="primario"
+                compacto
+              />
             </View>
           </Card>
         )}
@@ -226,36 +196,23 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: spacing.lg,
-    paddingBottom: 40,
+    paddingBottom: 36,
   },
   header: {
     marginBottom: spacing.xs,
   },
-  formCard: {
-    paddingVertical: spacing.md,
-  },
-  toggleFormHeader: {
-    paddingVertical: 2,
-    alignItems: 'center',
-  },
-  formBody: {
-    marginTop: spacing.md,
-  },
-  secaoTituloRow: {
+  topHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: spacing.xs,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  formCard: {
+    paddingVertical: spacing.md,
+    marginBottom: spacing.md,
   },
   jobCard: {
     paddingVertical: spacing.md,
-  },
-  keywordChipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginTop: 10,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -264,6 +221,7 @@ const styles = StyleSheet.create({
   },
   cardActions: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     borderTopWidth: 1,
     paddingTop: spacing.sm,

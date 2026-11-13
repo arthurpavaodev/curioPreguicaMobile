@@ -7,7 +7,7 @@ import {
 } from 'react-native';
 import { useAppData } from '../../../app/providers/AppDataProvider';
 import { useTheme } from '../../../app/providers/ThemeProvider';
-import { Badge, Button, Card, NoticeBanner } from '../../../components';
+import { Badge, Button, Card } from '../../../components';
 import { RankeadorDeAlunos } from '../../../domain';
 import { spacing, tipografia } from '../../../theme';
 
@@ -34,17 +34,11 @@ export function TeiaOpportunitiesScreen({
         ListHeaderComponent={
           <View style={styles.header}>
             <Text style={[tipografia.tituloTela, { color: cores.tinta }]}>
-              Oportunidades Mapeadas
+              Oportunidades
             </Text>
-            <Text style={[tipografia.apoio, { color: cores.textoSecundario, marginTop: 2, marginBottom: 12 }]}>
-              Visão consolidada de quantos estudantes atingem pelo menos 60% de aderência em cada vaga.
+            <Text style={[tipografia.apoio, { color: cores.textoSecundario, marginTop: 2 }]}>
+              Quantidade de estudantes com pelo menos 60% de aderência em cada vaga.
             </Text>
-
-            <NoticeBanner
-              tipo="info"
-              titulo="Dados demonstrativos locais"
-              mensagem="Inclui as vagas de exemplo e as vagas publicadas no perfil Empresa neste dispositivo."
-            />
           </View>
         }
         renderItem={({ item }) => {
@@ -57,36 +51,23 @@ export function TeiaOpportunitiesScreen({
                     {item.titulo}
                   </Text>
                   <Text style={[tipografia.apoio, { color: cores.textoSecundario, marginTop: 2 }]}>
-                    {item.empresa} · {item.requisitos.length} requisitos mapeados
+                    {item.empresa} · {item.requisitos.length} requisitos
                   </Text>
                 </View>
 
                 <Badge
-                  rotulo={item.origem === 'exemplo' ? 'exemplo' : 'empresa'}
-                  variante={item.origem === 'exemplo' ? 'padrao' : 'institucional'}
+                  rotulo={`${info.compativeis}/${info.total} compatíveis`}
+                  variante={info.compativeis > 0 ? 'ok' : 'padrao'}
                 />
               </View>
 
               <View style={[styles.footerRow, { borderTopColor: cores.linha }]}>
-                <View>
-                  <Text style={[tipografia.rotulo, { color: cores.textoSecundario }]}>
-                    ALUNOS COMPATÍVEIS (≥ 60%)
-                  </Text>
-                  <Text
-                    style={[
-                      tipografia.textoDestaque,
-                      {
-                        color: info.compativeis > 0 ? cores.ok : cores.textoSecundario,
-                        marginTop: 2,
-                      },
-                    ]}
-                  >
-                    {info.compativeis} de {info.total} estudantes
-                  </Text>
-                </View>
+                <Text style={[tipografia.apoio, { color: cores.textoSecundario }]}>
+                  Nota de corte referência: 60%
+                </Text>
 
                 <Button
-                  titulo="Ver ranking"
+                  titulo="Ver ranking →"
                   onPress={async () => {
                     await selecionarVaga(item.id);
                     onVerRankingVaga(item.id);
@@ -109,10 +90,10 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: spacing.lg,
-    paddingBottom: 40,
+    paddingBottom: 36,
   },
   header: {
-    marginBottom: spacing.xs,
+    marginBottom: spacing.md,
   },
   jobCard: {
     paddingVertical: spacing.md,

@@ -11,8 +11,6 @@ import {
   Badge,
   Card,
   EmptyState,
-  NoticeBanner,
-  ProgressBar,
 } from '../../../components';
 import { RankeadorDeAlunos } from '../../../domain';
 import { radius, spacing, tipografia } from '../../../theme';
@@ -28,7 +26,7 @@ export function TeiaDashboardScreen() {
     if (curriculo && curriculo.texto.trim().length > 0) {
       lista.unshift({
         id: 'aluno_atual',
-        nome: curriculo.nomeArquivo ? `Você (PDF: ${curriculo.nomeArquivo})` : 'Você (Aluno UNDB)',
+        nome: curriculo.nomeArquivo ? `Você (${curriculo.nomeArquivo})` : 'Você (Aluno UNDB)',
         modulo: 6,
         curriculoTexto: curriculo.texto,
       });
@@ -62,50 +60,14 @@ export function TeiaDashboardScreen() {
       style={[styles.container, { backgroundColor: cores.fundo }]}
       contentContainerStyle={styles.content}
     >
-      <Text style={[tipografia.tituloTela, { color: cores.tinta }]}>
-        Painel do TEIA
-      </Text>
-      <Text style={[tipografia.apoio, { color: cores.textoSecundario, marginTop: 2, marginBottom: 12 }]}>
-        Acompanhamento institucional da aderência dos estudantes às oportunidades.
-      </Text>
-
-      <NoticeBanner
-        tipo="info"
-        titulo="Modo de demonstração local"
-        mensagem="Estes dados de alunos são demonstrativos e armazenados localmente no dispositivo (sem sincronização com servidor remoto)."
-      />
-
-      {/* Três Indicadores */}
-      {resumo ? (
-        <View style={styles.kpiRow}>
-          <Card style={styles.kpiCard}>
-            <Text style={[tipografia.rotulo, { color: cores.textoSecundario }]}>
-              CADASTRADOS
-            </Text>
-            <Text style={[tipografia.monoValor, { color: cores.tinta, marginTop: 4 }]}>
-              {resumo.cadastrados}
-            </Text>
-          </Card>
-
-          <Card style={styles.kpiCard}>
-            <Text style={[tipografia.rotulo, { color: cores.textoSecundario }]}>
-              COM CURRÍCULO
-            </Text>
-            <Text style={[tipografia.monoValor, { color: cores.ok, marginTop: 4 }]}>
-              {resumo.comCurriculo}
-            </Text>
-          </Card>
-
-          <Card style={styles.kpiCard}>
-            <Text style={[tipografia.rotulo, { color: cores.textoSecundario }]}>
-              MÉDIA NA VAGA
-            </Text>
-            <Text style={[tipografia.monoValor, { color: cores.destaque, marginTop: 4 }]}>
-              {resumo.aderenciaMedia}%
-            </Text>
-          </Card>
-        </View>
-      ) : null}
+      <View style={styles.headerBlock}>
+        <Text style={[tipografia.tituloTela, { color: cores.tinta }]}>
+          Painel TEIA
+        </Text>
+        <Text style={[tipografia.apoio, { color: cores.textoSecundario, marginTop: 2 }]}>
+          Indicadores e ranking de compatibilidade dos estudantes por vaga.
+        </Text>
+      </View>
 
       <JobSelector
         vagas={vagasVisiveis}
@@ -113,13 +75,45 @@ export function TeiaDashboardScreen() {
         onSelecionarVaga={selecionarVaga}
       />
 
-      {/* Ranking Compacto de Alunos */}
+      {/* Três Indicadores Essenciais */}
+      {resumo ? (
+        <View style={styles.kpiRow}>
+          <Card style={styles.kpiCard}>
+            <Text style={[tipografia.rotulo, { color: cores.textoSecundario }]}>
+              ALUNOS
+            </Text>
+            <Text style={[tipografia.monoValor, { color: cores.tinta, marginTop: 2 }]}>
+              {resumo.cadastrados}
+            </Text>
+          </Card>
+
+          <Card style={styles.kpiCard}>
+            <Text style={[tipografia.rotulo, { color: cores.textoSecundario }]}>
+              COM CV
+            </Text>
+            <Text style={[tipografia.monoValor, { color: cores.ok, marginTop: 2 }]}>
+              {resumo.comCurriculo}
+            </Text>
+          </Card>
+
+          <Card style={styles.kpiCard}>
+            <Text style={[tipografia.rotulo, { color: cores.textoSecundario }]}>
+              MÉDIA
+            </Text>
+            <Text style={[tipografia.monoValor, { color: cores.destaque, marginTop: 2 }]}>
+              {resumo.aderenciaMedia}%
+            </Text>
+          </Card>
+        </View>
+      ) : null}
+
+      {/* Ranking Limpo de Alunos */}
       <View style={styles.sectionHeader}>
         <Text style={[tipografia.secao, { color: cores.tinta }]}>
           Ranking de Aderência
         </Text>
         <Text style={[tipografia.apoio, { color: cores.textoSecundario }]}>
-          {ranking.length} alunos
+          {ranking.length} estudantes
         </Text>
       </View>
 
@@ -139,7 +133,7 @@ export function TeiaDashboardScreen() {
               : 'atencao';
 
           const jaCandidatou = candidaturas.some(
-            (c) => c.vagaId === vagaSelecionada.id && (c.alunoId === aluno.id || aluno.id === 'aluno_atual'),
+            (c) => c.vagaId === vagaSelecionada.id && c.alunoId === aluno.id,
           );
 
           return (
@@ -152,55 +146,27 @@ export function TeiaDashboardScreen() {
             >
               <View style={styles.studentTop}>
                 <View style={{ flex: 1, marginRight: spacing.sm }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                  <View style={styles.nameRow}>
                     <Text style={[tipografia.textoDestaque, { color: cores.tinta }]}>
                       #{index + 1} {aluno.nome}
                     </Text>
-                    {jaCandidatou && (
-                      <Badge rotulo="Inscrito ✓" variante="ok" />
-                    )}
+                    {jaCandidatou ? <Badge rotulo="Inscrito ✓" variante="ok" /> : null}
                   </View>
                   <Text style={[tipografia.apoio, { color: cores.textoSecundario, marginTop: 2 }]}>
-                    {aluno.modulo}º módulo · Engenharia de Software
+                    {aluno.modulo}º módulo ·{' '}
+                    {!temCurriculo
+                      ? 'Currículo pendente'
+                      : faltam.length > 0
+                      ? `Falta: ${faltam.slice(0, 3).join(', ')}${faltam.length > 3 ? '...' : ''}`
+                      : 'Todos os requisitos atendidos'}
                   </Text>
                 </View>
 
                 <Badge
-                  rotulo={temCurriculo ? `${aderencia}% compatível` : 'sem currículo'}
+                  rotulo={temCurriculo ? `${aderencia}%` : 'Sem CV'}
                   variante={badgeVariante}
                 />
               </View>
-
-              {temCurriculo ? (
-                <>
-                  <ProgressBar
-                    progresso={aderencia}
-                    altura={6}
-                    cor={
-                      aderencia >= 75
-                        ? cores.ok
-                        : aderencia >= 45
-                        ? cores.destaque
-                        : cores.atencao
-                    }
-                    style={{ marginVertical: 6 }}
-                  />
-                  {faltam.length > 0 ? (
-                    <Text style={[tipografia.apoio, { color: cores.textoSecundario }]}>
-                      <Text style={{ fontWeight: '600', color: cores.tinta }}>Lacunas: </Text>
-                      {faltam.join(', ')}
-                    </Text>
-                  ) : (
-                    <Text style={[tipografia.apoio, { color: cores.ok }]}>
-                      ✓ Atende a todos os requisitos identificados da vaga.
-                    </Text>
-                  )}
-                </>
-              ) : (
-                <Text style={[tipografia.apoio, { color: cores.atencao, marginTop: 4 }]}>
-                  Pendente: solicitar cadastro do currículo.
-                </Text>
-              )}
             </View>
           );
         })}
@@ -215,7 +181,10 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.lg,
-    paddingBottom: 40,
+    paddingBottom: 36,
+  },
+  headerBlock: {
+    marginBottom: spacing.md,
   },
   kpiRow: {
     flexDirection: 'row',
@@ -244,6 +213,12 @@ const styles = StyleSheet.create({
   studentTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
   },
 });

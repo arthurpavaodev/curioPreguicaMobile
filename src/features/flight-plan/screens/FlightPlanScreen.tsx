@@ -13,11 +13,10 @@ import {
   Badge,
   Card,
   EmptyState,
-  NoticeBanner,
   ProgressBar,
 } from '../../../components';
 import { EtapaDoPlano } from '../../../domain';
-import { fontNames, radius, spacing, tipografia } from '../../../theme';
+import { fontNames, spacing, tipografia } from '../../../theme';
 import { JobSelector } from '../../jobs/components/JobSelector';
 
 type AbaPlano = 'todas' | 'curriculo' | 'competencias';
@@ -55,20 +54,19 @@ export function FlightPlanScreen() {
   }
 
   const { etapas, concluidasCount, totalEtapas, progresso } = planoAtual;
-  const pendentesCount = totalEtapas - concluidasCount;
 
   const etapasCurriculo = etapas.filter((e) => e.grupo === 'curriculo');
   const etapasCompetencias = etapas.filter((e) => e.grupo === 'competencias');
 
-  const prioritariasCount = etapas.filter(
-    (e) => !e.concluida && !e.titulo.includes('(diferencial)'),
-  ).length;
-
-  const mostrarCurriculo = abaAtiva === 'todas' || abaAtiva === 'curriculo';
-  const mostrarCompetencias = abaAtiva === 'todas' || abaAtiva === 'competencias';
+  const etapasFiltradas =
+    abaAtiva === 'curriculo'
+      ? etapasCurriculo
+      : abaAtiva === 'competencias'
+      ? etapasCompetencias
+      : etapas;
 
   const renderChecklistItem = (etapa: EtapaDoPlano, isLast: boolean) => {
-    const isPrioritaria = !etapa.concluida && !eIsDiferencial(etapa);
+    const isPrioritaria = !etapa.concluida && !etapa.titulo.includes('(diferencial)');
 
     return (
       <Pressable
@@ -110,7 +108,7 @@ export function FlightPlanScreen() {
             >
               {etapa.titulo}
             </Text>
-            {isPrioritaria ? <Badge rotulo="prioritária" variante="destaque" /> : null}
+            {isPrioritaria ? <Badge rotulo="Prioritária" variante="destaque" /> : null}
           </View>
 
           <Text
@@ -118,7 +116,7 @@ export function FlightPlanScreen() {
               tipografia.apoio,
               {
                 color: cores.textoSecundario,
-                marginTop: 3,
+                marginTop: 2,
                 textDecorationLine: etapa.concluida ? 'line-through' : 'none',
               },
             ]}
@@ -135,30 +133,12 @@ export function FlightPlanScreen() {
       style={[styles.container, { backgroundColor: cores.fundo }]}
       contentContainerStyle={styles.contentContainer}
     >
-      {/* Cabeçalho Centralizado Estilo CREA-MA */}
-      <View style={{ alignItems: 'center', marginBottom: spacing.md }}>
-        <Text
-          style={{
-            fontFamily: fontNames.plexSans600,
-            fontSize: 11,
-            letterSpacing: 1,
-            fontWeight: '700',
-            textTransform: 'uppercase',
-            color: cores.destaque,
-            marginBottom: 4,
-          }}
-        >
-          ROADMAP DE EVOLUÇÃO
+      <View style={styles.headerBlock}>
+        <Text style={[tipografia.tituloTela, { color: cores.tinta }]}>
+          Plano de Voo
         </Text>
-        <Text
-          style={[
-            tipografia.tituloTela,
-            { color: cores.tinta, textAlign: 'center' },
-          ]}
-        >
-          Clareza em cada etapa{'\n'}do seu{' '}
-          <Text style={{ color: cores.laranjaDestaque }}>Plano de Voo!</Text>{' '}
-          <Text style={{ color: '#00E640' }}>✳</Text>
+        <Text style={[tipografia.apoio, { color: cores.textoSecundario, marginTop: 2 }]}>
+          Marque as etapas concluídas para evoluir seu currículo e competências.
         </Text>
       </View>
 
@@ -168,15 +148,15 @@ export function FlightPlanScreen() {
         onSelecionarVaga={selecionarVaga}
       />
 
-      {/* Card Resumo de Progresso Estilo Gupy */}
+      {/* Card Enxuto de Progresso */}
       <Card>
         <View style={styles.progressHeader}>
           <View>
             <Text style={[tipografia.rotulo, { color: cores.textoSecundario }]}>
-              SEU PROGRESSO NA JORNADA
+              PROGRESSO NA VAGA
             </Text>
-            <Text style={[tipografia.monoDestaque, { color: cores.destaque, marginTop: 2 }]}>
-              {progresso}%
+            <Text style={[tipografia.monoValor, { color: cores.destaque, marginTop: 2 }]}>
+              {progresso}% concluído
             </Text>
           </View>
           <Badge
@@ -185,59 +165,15 @@ export function FlightPlanScreen() {
           />
         </View>
 
-        <View style={styles.progressLineRow}>
-          <View style={{ flex: 1, marginRight: spacing.sm }}>
-            <ProgressBar
-              progresso={progresso}
-              cor={progresso === 100 ? cores.ok : cores.destaque}
-              altura={8}
-            />
-          </View>
-          <Text style={[tipografia.apoio, { color: cores.textoSecundario, fontWeight: '600' }]}>
-            {concluidasCount}/{totalEtapas}
-          </Text>
-        </View>
-
-        <View style={styles.overviewBoxes}>
-          <View
-            style={[
-              styles.overviewBox,
-              { backgroundColor: cores.superficieSecundaria, borderColor: cores.linha },
-            ]}
-          >
-            <Text style={[tipografia.rotulo, { color: cores.textoSecundario }]}>A FAZER</Text>
-            <Text style={[tipografia.monoValor, { color: cores.tinta, marginTop: 2 }]}>
-              {pendentesCount}
-            </Text>
-          </View>
-
-          <View
-            style={[
-              styles.overviewBox,
-              { backgroundColor: cores.destaqueSuave, borderColor: 'transparent' },
-            ]}
-          >
-            <Text style={[tipografia.rotulo, { color: cores.destaque }]}>PRIORITÁRIAS</Text>
-            <Text style={[tipografia.monoValor, { color: cores.destaque, marginTop: 2 }]}>
-              {prioritariasCount}
-            </Text>
-          </View>
-
-          <View
-            style={[
-              styles.overviewBox,
-              { backgroundColor: cores.okSuave, borderColor: 'transparent' },
-            ]}
-          >
-            <Text style={[tipografia.rotulo, { color: cores.ok }]}>CONCLUÍDAS</Text>
-            <Text style={[tipografia.monoValor, { color: cores.ok, marginTop: 2 }]}>
-              {concluidasCount}
-            </Text>
-          </View>
-        </View>
+        <ProgressBar
+          progresso={progresso}
+          cor={progresso === 100 ? cores.ok : cores.destaque}
+          altura={8}
+          style={{ marginTop: spacing.sm }}
+        />
       </Card>
 
-      {/* Abas Estilo Gupy ("Curso | Conteúdo") */}
+      {/* Abas */}
       <View style={[styles.underlineTabs, { borderBottomColor: cores.linha }]}>
         {(
           [
@@ -275,58 +211,13 @@ export function FlightPlanScreen() {
         })}
       </View>
 
-      <NoticeBanner
-        tipo="info"
-        mensagem="Toque em qualquer etapa abaixo para marcar ou desmarcar sua conclusão."
-      />
-
-      {/* Grupo 1: Ajustar o Currículo */}
-      {mostrarCurriculo && etapasCurriculo.length > 0 ? (
-        <>
-          <View style={styles.sectionHeader}>
-            <Text style={[tipografia.secao, { color: cores.tinta }]}>
-              <Text style={{ color: cores.destaque }}>↗ </Text>
-              Ajustes no Currículo
-            </Text>
-            <Text style={[tipografia.apoio, { color: cores.textoSecundario }]}>
-              {etapasCurriculo.filter((e) => e.concluida).length}/{etapasCurriculo.length}
-            </Text>
-          </View>
-
-          <Card semPadding>
-            {etapasCurriculo.map((etapa, idx) =>
-              renderChecklistItem(etapa, idx === etapasCurriculo.length - 1),
-            )}
-          </Card>
-        </>
-      ) : null}
-
-      {/* Grupo 2: Desenvolver Competências */}
-      {mostrarCompetencias && etapasCompetencias.length > 0 ? (
-        <>
-          <View style={styles.sectionHeader}>
-            <Text style={[tipografia.secao, { color: cores.tinta }]}>
-              <Text style={{ color: cores.destaque }}>↗ </Text>
-              Trilha de Competências
-            </Text>
-            <Text style={[tipografia.apoio, { color: cores.textoSecundario }]}>
-              {etapasCompetencias.filter((e) => e.concluida).length}/{etapasCompetencias.length}
-            </Text>
-          </View>
-
-          <Card semPadding>
-            {etapasCompetencias.map((etapa, idx) =>
-              renderChecklistItem(etapa, idx === etapasCompetencias.length - 1),
-            )}
-          </Card>
-        </>
-      ) : null}
+      <Card semPadding>
+        {etapasFiltradas.map((etapa, idx) =>
+          renderChecklistItem(etapa, idx === etapasFiltradas.length - 1),
+        )}
+      </Card>
     </ScrollView>
   );
-}
-
-function eIsDiferencial(etapa: EtapaDoPlano): boolean {
-  return etapa.titulo.includes('(diferencial)');
 }
 
 const styles = StyleSheet.create({
@@ -335,32 +226,19 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: spacing.lg,
-    paddingBottom: 40,
+    paddingBottom: 36,
   },
   centralizado: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  headerBlock: {
+    marginBottom: spacing.md,
+  },
   progressHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  progressLineRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: spacing.md,
-  },
-  overviewBoxes: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  overviewBox: {
-    flex: 1,
-    padding: spacing.sm,
-    borderRadius: radius.md,
-    borderWidth: 1,
     alignItems: 'center',
   },
   underlineTabs: {
@@ -376,13 +254,6 @@ const styles = StyleSheet.create({
   },
   underlineTabText: {
     fontSize: 13,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: spacing.xs,
-    marginBottom: spacing.sm,
   },
   taskItem: {
     flexDirection: 'row',

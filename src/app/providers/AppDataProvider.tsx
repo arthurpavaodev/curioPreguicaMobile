@@ -62,6 +62,7 @@ export interface AppRepositories {
 
 export interface AppDataContextValue {
   // Estado base
+  autenticado: boolean;
   perfil: PerfilUsuario;
   curriculo: Curriculo;
   textoCurriculo: string;
@@ -84,6 +85,8 @@ export interface AppDataContextValue {
   planoAtual: PlanoDeVoo | null;
 
   // Ações
+  entrarComPerfil: (novoPerfil: PerfilUsuario) => Promise<void>;
+  sair: () => void;
   selecionarPerfil: (novoPerfil: PerfilUsuario) => Promise<void>;
   selecionarVaga: (vagaId: string) => Promise<void>;
   atualizarTextoCurriculo: (novoTexto: string) => void;
@@ -123,6 +126,7 @@ export function AppDataProvider({ repositories, children }: AppDataProviderProps
   const fileReader = repositories?.fileReader ?? importarArquivoTxt;
   const pdfReader = repositories?.pdfReader ?? importarArquivoPdf;
 
+  const [autenticado, setAutenticado] = useState<boolean>(false);
   const [perfil, setPerfil] = useState<PerfilUsuario>('aluno');
   const [curriculo, setCurriculo] = useState<Curriculo>(() => criarCurriculoExemplo());
   const [textoCurriculo, setTextoCurriculo] = useState<string>(CURRICULO_EXEMPLO_TEXTO);
@@ -248,6 +252,18 @@ export function AppDataProvider({ repositories, children }: AppDataProviderProps
     },
     [preferencesRepo, todasVagas, vagaSelecionadaId],
   );
+
+  const entrarComPerfil = useCallback(
+    async (novoPerfil: PerfilUsuario) => {
+      await selecionarPerfil(novoPerfil);
+      setAutenticado(true);
+    },
+    [selecionarPerfil],
+  );
+
+  const sair = useCallback(() => {
+    setAutenticado(false);
+  }, []);
 
   const selecionarVaga = useCallback(
     async (vagaId: string) => {
@@ -461,6 +477,7 @@ export function AppDataProvider({ repositories, children }: AppDataProviderProps
 
   const value = useMemo<AppDataContextValue>(
     () => ({
+      autenticado,
       perfil,
       curriculo,
       textoCurriculo,
@@ -479,6 +496,8 @@ export function AppDataProvider({ repositories, children }: AppDataProviderProps
       vagasComDiagnostico,
       diagnosticoAtual,
       planoAtual,
+      entrarComPerfil,
+      sair,
       selecionarPerfil,
       selecionarVaga,
       atualizarTextoCurriculo,
@@ -495,6 +514,7 @@ export function AppDataProvider({ repositories, children }: AppDataProviderProps
       recarregarDados,
     }),
     [
+      autenticado,
       perfil,
       curriculo,
       textoCurriculo,
@@ -513,6 +533,8 @@ export function AppDataProvider({ repositories, children }: AppDataProviderProps
       vagasComDiagnostico,
       diagnosticoAtual,
       planoAtual,
+      entrarComPerfil,
+      sair,
       selecionarPerfil,
       selecionarVaga,
       atualizarTextoCurriculo,

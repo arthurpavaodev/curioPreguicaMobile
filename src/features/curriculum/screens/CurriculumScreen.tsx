@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,9 +16,8 @@ import {
   Card,
   ErrorState,
   Input,
-  NoticeBanner,
 } from '../../../components';
-import { fontNames, spacing, tipografia } from '../../../theme';
+import { spacing, tipografia } from '../../../theme';
 import { useCurriculum } from '../hooks/useCurriculum';
 
 export function CurriculumScreen() {
@@ -25,10 +25,8 @@ export function CurriculumScreen() {
   const {
     curriculo,
     texto,
-    isExemplo,
     analise,
     carregando,
-    salvando,
     erro,
     atualizarTexto,
     usarExemplo,
@@ -36,8 +34,9 @@ export function CurriculumScreen() {
     importarPdf,
   } = useCurriculum();
 
-  const { secoesDetectadas, totalPalavras, competenciasReconhecidas, pontosFracos, ortografia } =
-    analise;
+  const [mostrarEditor, setMostrarEditor] = useState(false);
+
+  const { secoesDetectadas, totalPalavras, competenciasReconhecidas } = analise;
 
   if (carregando) {
     return (
@@ -56,38 +55,20 @@ export function CurriculumScreen() {
         style={[styles.container, { backgroundColor: cores.fundo }]}
         contentContainerStyle={styles.contentContainer}
       >
-        {/* Cabeçalho Centralizado Estilo CREA-MA */}
-        <View style={styles.centeredHeader}>
-          <Text style={[styles.overlineTag, { color: cores.destaque }]}>PERFIL DO CANDIDATO</Text>
-          <Text style={[styles.mainTitle, { color: cores.tinta }]}>
-            Importe seu{' '}
-            <Text style={{ color: cores.laranjaDestaque }}>currículo em PDF</Text>
-            {'\n'}e decole!
+        <View style={styles.headerBlock}>
+          <Text style={[tipografia.tituloTela, { color: cores.tinta }]}>
+            Meu Currículo
           </Text>
-          <Text style={[tipografia.apoio, { color: cores.textoSecundario, textAlign: 'center', marginTop: 4 }]}>
-            Envie seu currículo em PDF (obrigatório). O sistema extrai o texto do PDF e cruza com as palavras-chave das vagas para calcular sua compatibilidade real.
+          <Text style={[tipografia.apoio, { color: cores.textoSecundario, marginTop: 2 }]}>
+            Importe seu PDF ou edite o texto para atualizar sua compatibilidade com as vagas.
           </Text>
         </View>
 
         {erro ? <ErrorState mensagem={erro} /> : null}
 
-        {curriculo.nomeArquivo ? (
-          <NoticeBanner
-            tipo="info"
-            titulo={`PDF Selecionado: ${curriculo.nomeArquivo}`}
-            mensagem="Texto do PDF extraído com sucesso. Suas palavras-chave estão sincronizadas com o painel de vagas."
-          />
-        ) : isExemplo ? (
-          <NoticeBanner
-            tipo="atencao"
-            titulo="Currículo demonstrativo ativo"
-            mensagem="Estes dados são demonstrativos da UNDB. Toque em 'Importar PDF' para carregar seu arquivo oficial (.pdf)."
-          />
-        ) : null}
-
-        {/* Card Bento de Métricas e Ações */}
+        {/* Card de Resumo e Importação */}
         <Card>
-          <View style={styles.statsBar}>
+          <View style={[styles.statsBar, { borderBottomColor: cores.linha }]}>
             <View style={styles.statItem}>
               <Text style={[tipografia.rotulo, { color: cores.textoSecundario }]}>
                 PALAVRAS
@@ -101,7 +82,7 @@ export function CurriculumScreen() {
 
             <View style={styles.statItem}>
               <Text style={[tipografia.rotulo, { color: cores.textoSecundario }]}>
-                COMPETÊNCIAS
+                SKILLS
               </Text>
               <Text style={[tipografia.monoValor, { color: cores.destaque, marginTop: 2 }]}>
                 {competenciasReconhecidas.length}
@@ -112,21 +93,52 @@ export function CurriculumScreen() {
 
             <View style={styles.statItem}>
               <Text style={[tipografia.rotulo, { color: cores.textoSecundario }]}>
-                FORMATO
+                ARQUIVO
               </Text>
               <Text
                 style={[
                   tipografia.textoDestaque,
-                  { color: curriculo.nomeArquivo ? cores.ok : cores.laranjaDestaque, marginTop: 4 },
+                  {
+                    color: curriculo.nomeArquivo ? cores.ok : cores.laranjaDestaque,
+                    marginTop: 4,
+                  },
                 ]}
+                numberOfLines={1}
               >
                 {curriculo.nomeArquivo ? 'PDF ✓' : 'Exemplo'}
               </Text>
             </View>
           </View>
 
-          <Text style={[tipografia.rotulo, { color: cores.textoSecundario, marginTop: 14 }]}>
-            ESTRUTURA RECONHECIDA NO PDF
+          <Button
+            titulo="Importar Currículo em PDF (.pdf)"
+            onPress={importarPdf}
+            variante="primario"
+            style={{ marginTop: spacing.md }}
+          />
+
+          <View style={styles.secondaryActionsRow}>
+            <Button
+              titulo="Restaurar exemplo"
+              onPress={usarExemplo}
+              variante="padrao"
+              compacto
+              style={styles.secondaryBtn}
+            />
+            <Button
+              titulo="Limpar"
+              onPress={limpar}
+              variante="fantasma"
+              compacto
+              style={styles.secondaryBtn}
+            />
+          </View>
+        </Card>
+
+        {/* Seções e Competências Identificadas */}
+        <Card>
+          <Text style={[tipografia.rotulo, { color: cores.textoSecundario }]}>
+            SEÇÕES IDENTIFICADAS
           </Text>
           <View style={styles.chipsRow}>
             <Badge
@@ -151,93 +163,62 @@ export function CurriculumScreen() {
             />
           </View>
 
-          <View style={styles.actionsRow}>
-            <Button
-              titulo="Importar PDF (.pdf)  📄"
-              onPress={importarPdf}
-              variante="primario"
-              compacto
-              style={styles.actionBtnPrimary}
-            />
-          </View>
-          <View style={[styles.actionsRow, { marginTop: spacing.xs }]}>
-            <Button
-              titulo="Usar exemplo"
-              onPress={usarExemplo}
-              variante="padrao"
-              compacto
-              style={styles.actionBtn}
-            />
-            <Button
-              titulo="Limpar"
-              onPress={limpar}
-              variante="perigo"
-              compacto
-              style={styles.actionBtn}
-            />
-          </View>
+          {competenciasReconhecidas.length > 0 ? (
+            <>
+              <Text
+                style={[
+                  tipografia.rotulo,
+                  { color: cores.textoSecundario, marginTop: spacing.md },
+                ]}
+              >
+                COMPETÊNCIAS MAPEADAS ({competenciasReconhecidas.length})
+              </Text>
+              <View style={styles.chipsRow}>
+                {competenciasReconhecidas.map((comp) => (
+                  <Badge key={comp.id} rotulo={comp.rotulo} variante="destaque" />
+                ))}
+              </View>
+            </>
+          ) : null}
         </Card>
 
-        {/* Editor de texto / Visualizador do PDF extraído */}
-        <Input
-          rotulo="TEXTO EXTRAÍDO DO CURRÍCULO (PDF)"
-          placeholder="Importe seu arquivo .pdf para extrair automaticamente o texto, ou ajuste os dados aqui..."
-          multiline
-          value={texto}
-          onChangeText={atualizarTexto}
-          inputStyle={{ minHeight: 270, fontSize: 13.5, lineHeight: 20 }}
-        />
-
-        {/* Competências reconhecidas no currículo */}
-        {competenciasReconhecidas.length > 0 ? (
-          <Card>
-            <Text style={[tipografia.rotulo, { color: cores.destaque, marginBottom: 8 }]}>
-              COMPETÊNCIAS MAPEADAS NO SEU PERFIL ({competenciasReconhecidas.length})
-            </Text>
-            <View style={styles.chipsRow}>
-              {competenciasReconhecidas.map((comp) => (
-                <Badge key={comp.id} rotulo={comp.rotulo} variante="destaque" />
-              ))}
-            </View>
-          </Card>
-        ) : null}
-
-        {/* Alertas estruturais e ortográficos */}
-        {(pontosFracos.length > 0 || ortografia.length > 0) && (
-          <Card semPadding>
-            <View
-              style={[
-                styles.compactBoxHeader,
-                {
-                  backgroundColor: cores.superficieSecundaria,
-                  borderBottomColor: cores.linha,
-                },
-              ]}
-            >
-              <Text style={[tipografia.rotulo, { color: cores.textoSecundario }]}>
-                SUGESTÕES DE CLAREZA E ESCRITA ({pontosFracos.length + ortografia.length})
+        {/* Editor de Texto Retrátil (evita poluir a tela com texto longo) */}
+        <Card>
+          <Pressable
+            onPress={() => setMostrarEditor(!mostrarEditor)}
+            style={styles.editorToggleHeader}
+            accessibilityRole="button"
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[tipografia.textoDestaque, { color: cores.tinta }]}>
+                Texto do Currículo
               </Text>
+              {!mostrarEditor ? (
+                <Text
+                  style={[tipografia.apoio, { color: cores.textoSecundario, marginTop: 2 }]}
+                  numberOfLines={2}
+                >
+                  {texto.trim() || 'Nenhum texto informado.'}
+                </Text>
+              ) : null}
             </View>
+            <Text style={[tipografia.textoDestaque, { color: cores.destaque, marginLeft: 8 }]}>
+              {mostrarEditor ? 'Ocultar ▲' : 'Editar ▼'}
+            </Text>
+          </Pressable>
 
-            <View style={styles.compactListBody}>
-              {pontosFracos.map((pf, index) => (
-                <View key={`pf_${index}`} style={styles.compactAlertItem}>
-                  <Text style={[styles.bulletDot, { color: cores.laranjaDestaque }]}>•</Text>
-                  <Text style={[tipografia.apoio, { color: cores.tinta, flex: 1 }]}>{pf}</Text>
-                </View>
-              ))}
-
-              {ortografia.map((item, index) => (
-                <View key={`orto_${index}`} style={styles.compactAlertItem}>
-                  <Text style={[styles.bulletDot, { color: cores.erro }]}>!</Text>
-                  <Text style={[tipografia.apoio, { color: cores.tinta, flex: 1 }]}>
-                    Revisão: <Text style={{ fontWeight: '600' }}>{item.rotulo}</Text>
-                  </Text>
-                </View>
-              ))}
+          {mostrarEditor ? (
+            <View style={{ marginTop: spacing.sm }}>
+              <Input
+                placeholder="Cole ou edite o conteúdo do seu currículo..."
+                multiline
+                value={texto}
+                onChangeText={atualizarTexto}
+                inputStyle={{ minHeight: 200, fontSize: 13.5, lineHeight: 20 }}
+              />
             </View>
-          </Card>
-        )}
+          ) : null}
+        </Card>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -249,32 +230,15 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: spacing.lg,
-    paddingBottom: 40,
+    paddingBottom: 36,
   },
   centralizado: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  centeredHeader: {
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  overlineTag: {
-    fontFamily: fontNames.plexSans600,
-    fontSize: 11,
-    letterSpacing: 1,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    marginBottom: 4,
-  },
-  mainTitle: {
-    fontFamily: fontNames.bricolage700,
-    fontSize: 25,
-    lineHeight: 31,
-    fontWeight: '700',
-    textAlign: 'center',
-    letterSpacing: -0.4,
+  headerBlock: {
+    marginBottom: spacing.md,
   },
   statsBar: {
     flexDirection: 'row',
@@ -282,7 +246,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingBottom: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: '#ECEEF2',
   },
   statItem: {
     flex: 1,
@@ -290,45 +253,25 @@ const styles = StyleSheet.create({
   },
   statDivider: {
     width: 1,
-    height: 32,
+    height: 30,
+  },
+  secondaryActionsRow: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+    marginTop: spacing.xs,
+  },
+  secondaryBtn: {
+    flex: 1,
   },
   chipsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
-    marginTop: 6,
+    marginTop: 8,
   },
-  actionsRow: {
+  editorToggleHeader: {
     flexDirection: 'row',
-    gap: spacing.xs,
-    marginTop: spacing.md,
-  },
-  actionBtn: {
-    flex: 1,
-    paddingHorizontal: spacing.sm,
-  },
-  actionBtnPrimary: {
-    flex: 1,
-    minHeight: 44,
-  },
-  compactBoxHeader: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-  },
-  compactListBody: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    gap: 6,
-  },
-  compactAlertItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  bulletDot: {
-    fontWeight: '700',
-    fontSize: 14,
-    marginRight: 8,
-    lineHeight: 18,
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
 });
